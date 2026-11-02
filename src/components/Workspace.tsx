@@ -1,0 +1,528 @@
+'use client';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { UserButton } from '@clerk/nextjs';
+import { DrawingSvg, Prims } from './Prims';
+import { Cat, CatSays } from './Cat';
+import { Player } from './Player';
+import { YtCard } from './YtCard';
+import { Sidebar, type Nav } from './Sidebar';
+import { About } from './About';
+import { FullSheetSvg } from './FullSheet';
+import { pages } from '@/lib/fullsheet';
+import { Challenge } from './Challenge';
+import { Quiz } from './Quiz';
+import { EMPTY, BADGES, LEVELS, levelOf, progress, load as loadGame, save as saveGame, type Game } from '@/lib/game';
+import { sfx, isMuted, setMuted } from '@/lib/sfx';
+import { added, catLine } from '@/lib/explain';
+import { parseQuestion } from '@/lib/parser';
+import { PRESETS, randomQuestion } from '@/lib/presets';
+import { kindOf } from '@/lib/solver';
+import { SHEETS, ALL as ALLQ, matchCatalog, variantOf, type Q } from '@/lib/catalog';
+import { VIDEOS, ytUrl, questionVideos } from '@/lib/videos';
+import { sheetLayout } from '@/lib/sheet';
+import { readImage, imageToDataUrl } from '@/lib/ocr';
+import { askAI, missingOf } from '@/lib/ai';
+import { sheetToPdf } from '@/lib/pdf';
+import { pencilsOf, colOf } from '@/lib/pencil';
+import { listSheets, saveSheet, type Saved } from '@/lib/store';
+import type { LineInput, Solution } from '@/lib/types';
+
+type Screen = 'scan' | 'trophies' | 'full' | 'about' | 'sheets' | 'confirm' | 'steps' | 'sheet' | 'mistakes' | 'saved';
+type NumKey = 'L' | 'theta' | 'phi' | 'ha' | 'da';
+
+const DEFAULT: LineInput = { L: 70, theta: 0, phi: 30, ha: 20, da: 15, n1: 'A', n2: 'B' };
+const KIND_LABEL = { hp: 'Line parallel to HP, inclined to VP', vp: 'Line parallel to VP, inclined to HP', both: 'Line inclined to both HP and VP' };
+const R = (v: number) => Math.round(v * 100) / 100;
+
+function Logo({ level }: { level: number }) {
+  return <Cat mood="idle" size={40} level={level} />;
+}
+
+function SheetSvg({ sol, svgRef }: { sol: Solution; svgRef: React.RefObject<SVGSVGElement> }) {
+  const lay = sheetLayout(sol);
+  const map = (x: number, y: number): [number, number] => [lay.ox + x * lay.s, lay.oy - y * lay.s];
+  return (
+    <svg ref={svgRef} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 297" width="420" height="297" style={{ width: '100%', height: 'auto', display: 'block', background: '#fff' }} fontFamily="Arial, sans-serif" role="img" aria-label="A3 drawing sheet">
+      <rect width="420" height="297" fill="#fff" />
+      <rect x="10" y="10" width="400" height="277" fill="none" stroke="#1B2340" strokeWidth="0.8" />
+      <rect x="250" y="257" width="160" height="30" fill="none" stroke="#1B2340" strokeWidth="0.5" />
+      <line x1="345" y1="257" x2="345" y2="287" stroke="#1B2340" strokeWidth="0.4" />
+      <text x="254" y="265" fontSize="3.6" fontWeight="700" fill="#1B2340">{sol.header[0]}</text>
+      <text x="254" y="272" fontSize="3.2" fill="#1B2340">{sol.header[1]}</text>
+      <text x="254" y="279" fontSize="3.2" fill="#1B2340">{sol.header[2]}</text>
+      <text x="349" y="265" fontSize="3.2" fill="#1B2340">Scale {lay.label}</text>
+      <text x="349" y="272" fontSize="3.2" fill="#1B2340">First angle</text>
+      <text x="349" y="279" fontSize="3.2" fill="#1B2340">Dims in mm</text>
+      <Prims items={sol.final} map={map} u={0.26} fs={3.6} dz={1} />
+    </svg>
+  );
+}
+
+export default function Workspace() {
+  const [screen, setScreen] = useState<Screen>('scan');
+  const [text, setText] = useState('');
+  const [typing, setTyping] = useState(false);
+  const [busy, setBusy] = useState('');
+  const [inp, setInp] = useState<LineInput>(DEFAULT);
+  const [warn, setWarn] = useState<string[]>([]);
+  const [sol, setSol] = useState<Solution | null>(null);
+  const [step, setStep] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [err, setErr] = useState('');
+  const [aiUsed, setAiUsed] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [saved, setSaved] = useState<Saved[]>([]);
+  const sheetRef = useRef<SVGSVGElement>(null);
+  const [qid, setQid] = useState('');
+  const [tab, setTab] = useState<'lesson' | 'steps' | 'turn'>('lesson');
+  const [game, setGame] = useState<Game>(EMPTY);
+  const [toast, setToast] = useState<{ t: string; k: number } | null>(null);
+  const [qtext, setQtext] = useState<string | null>(null);
+  const [mute, setMute] = useState(false);
+  useEffect(() => { setGame(loadGame()); setMute(isMuted()); }, []);
+  function award(xp: number, why: string, kind?: 'tap' | 'quiz' | 'variant') {
+    setGame((g) => {
+      const n = { ...g, xp: g.xp + xp, tapOk: g.tapOk + (kind === 'tap' ? 1 : 0), quizOk: g.quizOk + (kind === 'quiz' ? 1 : 0), variants: g.variants + (kind === 'variant' ? 1 : 0) };
+      if (levelOf(n.xp) > levelOf(g.xp)) setTimeout(() => { sfx('win'); setToast({ t: `Level up! You are a ${LEVELS[levelOf(n.xp) - 1]} 🎉`, k: Date.now() }); }, 700);
+      saveGame(n);
+      return n;
+    });
+    setToast({ t: `+${xp} XP · ${why}`, k: Date.now() });
+  }
+  const level = levelOf(game.xp);
+  const [menu, setMenu] = useState(false);
+  const [pg, setPg] = useState(0);
+  const [pname, setPname] = useState('');
+  const [proll, setProll] = useState('');
+  const fullRef = useRef<SVGSVGElement>(null);
+  const [paper, setPaper] = useState<'A1' | 'A3'>('A1');
+  const allPages = useMemo(() => pages(), []);
+  const [done, setDone] = useState<string[]>([]);
+  const [vid, setVid] = useState(false);
+  const [matched, setMatched] = useState('');
+  const touch = useRef<number | null>(null);
+
+  useEffect(() => {
+    try { setDone(JSON.parse(localStorage.getItem('edbuddy.done') || '[]')); } catch { /* ignore */ }
+  }, []);
+
+  function markDone(id: string) {
+    setDone((d) => {
+      if (d.includes(id)) return d;
+      const n = [...d, id];
+      try { localStorage.setItem('edbuddy.done', JSON.stringify(n)); } catch { /* ignore */ }
+      return n;
+    });
+  }
+
+  function finish() {
+    if (sol?.id.endsWith('-v')) { award(15, 'New numbers solved', 'variant'); sfx('win'); return; }
+    if (qid && !done.includes(qid)) { markDone(qid); award(30, 'Question finished'); sfx('win'); }
+  }
+
+  function openQ(q: Q, note = '') {
+    setQid(q.id);
+    setQtext(null);
+    setTab('lesson');
+    setSol(q.build());
+    setStep(0);
+    setPlaying(false);
+    setMsg('');
+    setMatched(note);
+    setScreen('steps');
+    window.scrollTo({ top: 0 });
+  }
+
+  useEffect(() => {
+    if (!playing || !sol) return;
+    const t = setInterval(() => {
+      setStep((s) => {
+        if (s >= sol.steps.length - 1) { setPlaying(false); return s; }
+        return s + 1;
+      });
+    }, 2400);
+    return () => clearInterval(t);
+  }, [playing, sol]);
+
+  function show(t: string, input: Partial<LineInput>, missing: string[], ai: boolean) {
+    setInp({ ...DEFAULT, ...input, L: input.L ?? NaN, theta: input.theta ?? NaN, phi: input.phi ?? NaN, ha: input.ha ?? NaN, da: input.da ?? NaN });
+    setWarn(missing);
+    setText(t);
+    setErr('');
+    setAiUsed(ai);
+    setScreen('confirm');
+  }
+
+  function loadText(t: string) {
+    const { input, missing } = parseQuestion(t);
+    show(t, input, missing, false);
+  }
+
+  // Rules first. Only if some value is still missing, ask Gemini to read the question (rules win where they found a value).
+  async function readAndLoad(t: string, file?: File) {
+    const m = matchCatalog(t);
+    if (m) { openQ(m.q, `We found this in your sheets: ${m.q.code} · ${m.q.title}.`); return; }
+    const { input: ruled, missing } = parseQuestion(t);
+    let input = ruled, ai = false;
+    if (missing.length > 0) {
+      setBusy('Double-checking with AI…');
+      const image = file ? await imageToDataUrl(file).catch(() => undefined) : undefined;
+      const r = t.trim() || image ? await askAI(t, image) : null;
+      if (r) { input = { ...r, ...ruled }; ai = Object.keys(r).length > 0; }
+    }
+    if (Object.keys(input).length === 0) throw new Error('empty');
+    show(t, input, missingOf(input), ai);
+  }
+
+  async function onPhoto(f?: File | null) {
+    if (!f) return;
+    setErr('');
+    setBusy('Reading your photo… (first time takes a few seconds)');
+    let t = '';
+    try { t = (await readImage(f)).trim(); } catch { /* AI fallback below may still read the photo */ }
+    try {
+      await readAndLoad(t, f);
+    } catch {
+      setErr('We could not read that photo. Try better light, hold it straight, or tap “Type it”.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function solveNow() {
+    setErr('');
+    try {
+      const r = await fetch('/api/solve', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ input: inp }) });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || 'Could not solve');
+      setQid('');
+      setTab('lesson');
+      setMatched('');
+      setSol(j.solution);
+      setStep(0);
+      setPlaying(false);
+      setMsg('');
+      setScreen('steps');
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+  }
+
+  async function openSaved() {
+    setScreen('saved');
+    setSaved(await listSheets());
+  }
+
+  async function save() {
+    if (!sol) return;
+    if (!sol.lineInput) return;
+    const where = await saveSheet(sol.title, sol.lineInput);
+    setMsg(where === 'cloud' ? 'Saved to your account.' : 'Saved on this phone.');
+  }
+
+  async function download() {
+    if (!sheetRef.current || !sol) return;
+    setMsg('Making PDF…');
+    try {
+      await sheetToPdf(sheetRef.current, `ED-${sol.id}`);
+      setMsg('PDF downloaded. Print it at A3 or use it to copy the sheet.');
+    } catch {
+      setMsg('Could not make the PDF. Try again.');
+    }
+  }
+
+  const Num = ({ k, label }: { k: NumKey; label: string }) => (
+    <label className="field">
+      <span>{label}</span>
+      <input inputMode="decimal" value={Number.isNaN(inp[k]) ? '' : inp[k]} onChange={(e) => setInp({ ...inp, [k]: e.target.value === '' ? NaN : Number(e.target.value) })} />
+    </label>
+  );
+
+  const Back = ({ to }: { to: Screen }) => (
+    <button className="back" aria-label="Back" onClick={() => { setPlaying(false); setScreen(to); }}>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1B2340" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+    </button>
+  );
+
+  const n = sol?.steps.length ?? 0;
+  const st = sol?.steps[step];
+  const curQ = ALLQ.find((q) => q.id === qid);
+  const vids = curQ ? questionVideos(curQ) : VIDEOS.inclined;
+  const go = (d: number) => { setPlaying(false); setStep((x) => Math.max(0, Math.min(n - 1, x + d))); };
+  const totalQ = ALLQ.length;
+
+  return (
+    <div className="shell">
+    <Sidebar open={menu} onClose={() => setMenu(false)} done={done} qid={qid} screen={screen} level={level} flowAt={screen === 'scan' ? 0 : screen === 'confirm' ? 1 : screen === 'steps' ? 2 : screen === 'sheet' || screen === 'mistakes' ? 3 : -1}
+      onNav={(nv: Nav) => { if (nv === 'saved') openSaved(); else setScreen(nv); window.scrollTo({ top: 0 }); }} onOpenQ={(q) => openQ(q)} />
+    <div className="app">
+      {toast && <div key={toast.k} className="toast" onAnimationEnd={() => setToast(null)}>{toast.t}</div>}
+      <header className="top">
+        <div className="brand"><button className="hamb" aria-label="Open menu" onClick={() => setMenu(true)}><span /><span /><span /></button><Logo level={level} /><span>ED Cat</span></div>
+        <div className="hright"><button className="xp" onClick={() => setScreen('trophies')} aria-label="Level and trophies">Lv {level} · {game.xp} XP</button><button className="mute" aria-label={mute ? 'Unmute sounds' : 'Mute sounds'} onClick={() => { setMuted(!mute); setMute(!mute); }}>{mute ? '🔇' : '🔊'}</button><UserButton afterSignOutUrl="/" /></div>
+      </header>
+
+      <main className="body">
+        {screen === 'scan' && (
+          <>
+            <CatSays mood="happy" k="hero">Meow! I am Pixel, level {level}. Show me your ED question and I will draw it with you, one step at a time. 🐾</CatSays>
+            <button className="card homexp" onClick={() => setScreen('trophies')}><b>Level {level} · {LEVELS[level - 1]}</b><span>{game.xp} XP · {game.streak} day streak 🔥 · {done.length}/{totalQ} done</span><div className="meter"><i style={{ width: `${progress(game.xp).pct}%` }} /></div></button>
+            <h1>Snap the question.<br /><span className="acc">Get every step.</span></h1>
+            <div className="finder">
+              {busy ? (
+                <div className="busy"><div className="walk"><Cat mood="think" size={84} /></div>{busy}</div>
+              ) : typing ? (
+                <textarea className="paper" autoFocus placeholder="Type or paste your question, e.g. A line AB, 70 mm long, is parallel to the HP and inclined at 30° to the VP…" value={text} onChange={(e) => setText(e.target.value)} />
+              ) : (
+                <div className="paper"><b className="mono">Q3.</b> A line AB, <b>70 mm</b> long, is parallel to the HP and inclined at <b>30°</b> to the VP. End A is <b>20 mm</b> above the HP and <b>15 mm</b> in front of the VP. Draw its projections.</div>
+              )}
+              <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
+            </div>
+            {err && <div className="note warn">{err}</div>}
+            <div className="row">
+              <label className="btn primary grow">
+                Take photo
+                <input type="file" accept="image/*" capture="environment" hidden onChange={(e) => { onPhoto(e.target.files?.[0]); e.target.value = ''; }} />
+              </label>
+              <button className="btn ghost" onClick={() => setTyping((t) => !t)}>{typing ? 'Cancel' : 'Type it'}</button>
+            </div>
+            {typing ? (
+              <button className="btn primary full" disabled={text.trim().length < 10} onClick={async () => { setBusy('Reading…'); try { await readAndLoad(text); } catch { setErr('We could not find any numbers in that. Please check the question.'); } finally { setBusy(''); } }}>Read my question</button>
+            ) : (
+              <label className="btn ghost full">
+                Choose from gallery
+                <input type="file" accept="image/*" hidden onChange={(e) => { onPhoto(e.target.files?.[0]); e.target.value = ''; }} />
+              </label>
+            )}
+            <button className="btn dark full" onClick={() => setScreen('sheets')}>Open Sheets 1 to 3 →</button>
+            <h3>Or try a ready question</h3>
+            <div className="list">
+              {PRESETS.map((p) => (
+                <button key={p.id} className="item" onClick={() => loadText(p.text)}>{p.title}<span>→</span></button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {screen === 'sheets' && (
+          <>
+            <h1 className="sm">Your sheets</h1>
+            <div className="pagecat"><Cat mood="point" size={74} level={level} /><div className="bubble">Pick any question. I will draw it for you, line by line, and tell you the pencil to use. 🐾</div></div>
+            <div className="card prog2"><b>{done.length} of {totalQ} done</b><div className="meter"><i style={{ width: `${(100 * done.length) / totalQ}%` }} /></div></div>
+            {SHEETS.map((sh) => (
+              <section key={sh.id} className="sheetgrp">
+                <h3>{sh.title}</h3>
+                {sh.parts.map((pt) => (
+                  <div key={pt.title} className="list">
+                    <div className="part">{pt.title}</div>
+                    {pt.qs.map((q) => (
+                      <button key={q.id} className="item q" onClick={() => openQ(q)}>
+                        <span className={done.includes(q.id) ? 'tick on' : 'tick'}>{done.includes(q.id) ? '✓' : q.code.slice(0, 3)}</span>
+                        <span className="qt"><b>{q.code} · {q.title}</b><small>{q.statement.length > 90 ? q.statement.slice(0, 88) + '…' : q.statement}</small></span>
+                        <span>→</span>
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </section>
+            ))}
+          </>
+        )}
+
+        {screen === 'about' && <About />}
+
+        {screen === 'trophies' && (
+          <>
+            <div className="aboutcat"><Cat mood="happy" size={96} level={level} /><div><h1 className="sm">Level {level}: {LEVELS[level - 1]}</h1><p>{game.xp} XP · {game.streak} day streak 🔥</p></div></div>
+            <div className="card prog2"><b>{level >= 6 ? 'Top level reached!' : `${progress(game.xp).next - game.xp} XP to level ${level + 1}`}</b><div className="meter"><i style={{ width: `${progress(game.xp).pct}%` }} /></div></div>
+            <div className="card info"><h3>How to earn XP</h3><ul className="added"><li><span>Finish a question</span><b>+30</b></li><li><span>New numbers solved</span><b>+15</b></li><li><span>Right quiz answer</span><b>+10</b></li><li><span>Point placed in Your turn</span><b>+5</b></li></ul></div>
+            <h3>Badges</h3>
+            <div className="badges">
+              {BADGES.map((b) => { const on = b.test(game, done); return (<div key={b.id} className={`badge ${on ? 'on' : ''}`}><span>{on ? b.icon : '🔒'}</span><b>{b.name}</b><small>{b.desc}</small></div>); })}
+            </div>
+            <div className="card info"><h3>Cat wardrobe</h3><p className="small">Level 2 glasses · Level 3 graduation cap · Level 4 scarf · Level 5 crown.</p></div>
+          </>
+        )}
+
+        {screen === 'full' && (
+          <>
+            <h1 className="sm">Full drawing sheets</h1>
+            <div className="pagecat"><Cat mood="happy" size={74} level={level} /><div className="bubble">Here is your whole sheet on A1 or A3 paper. Every drawing is 1:1, so you can copy it straight onto your paper!</div></div>
+            <div className="tabs"><button className={paper === 'A1' ? 'on' : ''} onClick={() => setPaper('A1')}>A1 sheet</button><button className={paper === 'A3' ? 'on' : ''} onClick={() => setPaper('A3')}>A3 sheet</button></div>
+            <div className="tabs scroll">
+              {allPages.map((p, i) => <button key={i} className={pg === i ? 'on' : ''} onClick={() => setPg(i)}>{p.title.split(' · ')[0]}{allPages.filter((x) => x.sheetId === p.sheetId).length > 1 ? ` · ${p.part.split(' · ')[0]}` : ''}</button>)}
+            </div>
+            <div className="card sheet paper3"><FullSheetSvg paper={paper} page={allPages[pg]} svgRef={fullRef} name={pname} roll={proll} /></div>
+            <div className="grid2">
+              <label className="field"><span>Your name</span><input value={pname} onChange={(e) => setPname(e.target.value)} /></label>
+              <label className="field"><span>Roll no.</span><input value={proll} onChange={(e) => setProll(e.target.value)} /></label>
+            </div>
+            <div className="note">Every question on this page is drawn to one scale. Tap Download to get the PDF, then copy each drawing at 1:1 on your own sheet.</div>
+            <button className="btn primary full big" onClick={async () => { if (!fullRef.current) return; try { await sheetToPdf(fullRef.current, `ED-${allPages[pg].sheetId}-page${pg + 1}-${paper}`, paper); } catch { /* ignore */ } }}>Download this page as PDF</button>
+          </>
+        )}
+
+        {screen === 'confirm' && (
+          <>
+            <div className="bar"><Back to="scan" /><div><div className="eyebrow">Check before we solve</div><h2>Did we read it right?</h2></div></div>
+            <div className="card quote">{text}</div>
+            {aiUsed && <div className="note">AI helped read some values. Please check each number against your question.</div>}
+            {warn.length > 0 && <div className="note warn">We could not find: {warn.join(', ')}. Please fill them in below.</div>}
+            <div className="grid2">
+              <Num k="L" label="Length (mm)" />
+              <Num k="theta" label="Angle with HP θ (°)" />
+              <Num k="phi" label="Angle with VP φ (°)" />
+              <Num k="ha" label="End A above HP (mm)" />
+              <Num k="da" label="End A in front of VP (mm)" />
+              <div className="field">
+                <span>Line name</span>
+                <div className="names">
+                  <input maxLength={1} value={inp.n1 ?? ''} onChange={(e) => setInp({ ...inp, n1: e.target.value.toUpperCase() })} />
+                  <input maxLength={1} value={inp.n2 ?? ''} onChange={(e) => setInp({ ...inp, n2: e.target.value.toUpperCase() })} />
+                </div>
+              </div>
+            </div>
+            {!Number.isNaN(inp.theta) && !Number.isNaN(inp.phi) && <div className="note">{KIND_LABEL[kindOf(inp)]}. First angle projection, A3 sheet.</div>}
+            {err && <div className="note warn">{err}</div>}
+            <button className="btn primary full big" onClick={solveNow}>Show me the steps →</button>
+          </>
+        )}
+
+        {screen === 'steps' && sol && st && (
+          <>
+            <div className="bar"><Back to={qid ? 'sheets' : 'confirm'} /><div className="grow"><div className="eyebrow">{sol.title}</div><h2>Step {step + 1} of {n}</h2></div></div>
+            <div className="tabs" role="tablist">
+              <button role="tab" aria-selected={tab === 'lesson'} className={tab === 'lesson' ? 'on' : ''} onClick={() => setTab('lesson')}>🎬 Animated lesson</button>
+              <button role="tab" aria-selected={tab === 'turn'} className={tab === 'turn' ? 'on' : ''} onClick={() => setTab('turn')}>🎯 Your turn</button>
+              <button role="tab" aria-selected={tab === 'steps'} className={tab === 'steps' ? 'on' : ''} onClick={() => setTab('steps')}>📋 Steps</button>
+            </div>
+            {matched && <div className="note">{matched}</div>}
+            {tab === 'lesson' && (
+              <>
+                <Player sol={sol} question={qtext ?? curQ?.statement ?? text} />
+                {curQ && <YtCard q={curQ} />}
+                {curQ?.p && <button className="btn ghost full" onClick={() => { const v = variantOf(curQ); if (v) { setSol(v.sol); setQtext(v.statement); setStep(0); sfx('pop'); } }}>🎲 Try new numbers</button>}
+                <button className="btn primary full" onClick={() => { finish(); setScreen('sheet'); }}>See final sheet →</button>
+              </>
+            )}
+            {tab === 'turn' && <Challenge sol={sol} award={award} />}
+            {tab === 'steps' && (<>
+            {curQ && <div className="card qcard"><span className="qtag">The question</span>{qtext ?? curQ.statement}</div>}
+            <div className="prog">{sol.steps.map((_, i) => <i key={i} className={i < step ? 'done' : i === step ? 'cur' : ''} />)}</div>
+            <div className="card draw" onTouchStart={(e) => { touch.current = e.touches[0].clientX; }} onTouchEnd={(e) => { if (touch.current === null) return; const d = e.changedTouches[0].clientX - touch.current; touch.current = null; if (Math.abs(d) > 50) go(d < 0 ? 1 : -1); }}>
+              <DrawingSvg sol={sol} upto={step} />
+              <div className="hint">Swipe left or right to change step</div>
+            </div>
+            <CatSays mood={step === n - 1 ? 'happy' : step % 2 ? 'point' : 'think'} k={`${sol.id}-${step}`}>
+              <b>{catLine(step, n)}</b>{st.why}
+            </CatSays>
+            <div className="card" key={`c${step}`}>
+              <h3 className="st">{st.title}</h3>
+              <div className="tags"><span>🖊 {st.tool}</span>{pencilsOf(st.prims).map((g) => <span key={g} className="pgrade" style={{ background: colOf(g) }}>{g} pencil</span>)}</div>
+            </div>
+            <div className="card info">
+              <h3>🐾 What I added</h3>
+              <ul className="added">
+                {added(st.prims).map((x, i) => (<li key={i}><span>{x.what}</span>{x.len && <b>{x.len}</b>}</li>))}
+              </ul>
+            </div>
+            {st.calc && <div className="card info calcbox"><h3>🧮 Length / calculation</h3><div className="calcline">{st.calc}</div></div>}
+            {step === 0 && sol.plan && (
+              <div className="card info plan"><h3>🧠 How we crack this question</h3><ol>{sol.plan.map((x, i) => <li key={i}>{x}</li>)}</ol></div>
+            )}
+            <button className="btn ghost full" onClick={() => setVid(true)}>▶ Watch videos for this topic</button>
+            <div className="row">
+              <button className="btn ghost grow" disabled={step === 0} onClick={() => { setPlaying(false); setStep(step - 1); }}>Back</button>
+              <button className="btn dark sq" aria-label={playing ? 'Pause' : 'Play'} onClick={() => setPlaying((p) => !p)}>{playing ? '❚❚' : '▶'}</button>
+              {step < n - 1 ? (
+                <button className="btn primary grow2" onClick={() => { setPlaying(false); setStep(step + 1); }}>Next step</button>
+              ) : (
+                <button className="btn primary grow2" onClick={() => { finish(); setScreen('sheet'); }}>See final sheet</button>
+              )}
+            </div>
+            </>)}
+          </>
+        )}
+
+        {screen === 'sheet' && sol && (
+          <>
+            <div className="bar"><Back to="steps" /><div><div className="eyebrow ok">All {n} steps done</div><h2>Your final sheet</h2></div></div>
+            <div className="confetti" aria-hidden="true">{Array.from({ length: 24 }, (_, i) => <i key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i % 8) * 0.15}s`, background: ['#F4A340', '#0B7A75', '#E0607E', '#C2410C'][i % 4] }} />)}</div>
+            <CatSays mood="happy" k="done">Purr-fect! All {n} steps done. Download the PDF and copy it onto your A3 sheet. 🎉</CatSays>
+            {sol.plan && <div className="card info plan"><h3>🧠 How we cracked it</h3><ol>{sol.plan.map((x, i) => <li key={i}>{x}</li>)}</ol></div>}
+            <div className="card sheet"><SheetSvg sol={sol} svgRef={sheetRef} /></div>
+            {sol.results.map((r, i) => (
+              <div key={i} className="card calc2"><span>{r.label}</span><b>{r.value}</b></div>
+            ))}
+            <div className="card info"><h3>✍️ Working to write on your sheet</h3>
+              <ol className="working">{sol.steps.filter((x) => x.calc).map((x, i) => <li key={i}><span>{x.title}</span><b>{x.calc}</b></li>)}</ol></div>
+            <Quiz key={sol.id + step} sol={sol} award={award} />
+            {msg && <div className="note">{msg}</div>}
+            <div className="row">
+              {sol.lineInput && <button className="btn ghost grow" onClick={save}>Save</button>}
+              <button className="btn primary grow2" onClick={download}>Download PDF</button>
+            </div>
+            <button className="btn ghost full" onClick={() => setScreen('mistakes')}>Avoid these mistakes →</button>
+          </>
+        )}
+
+        {screen === 'mistakes' && sol && (
+          <>
+            <div className="bar"><Back to="sheet" /><div><div className="eyebrow">Marks lost here most</div><h2>Avoid these {sol.mistakes.length}</h2></div></div>
+            {sol.mistakes.map((m, i) => (
+              <div key={i} className="card mis"><span className="num">{i + 1}</span><div><b>{m.title}.</b> {m.body}</div></div>
+            ))}
+            <button className="btn primary full big" onClick={() => loadText(randomQuestion())}>Practice with new numbers</button>
+          </>
+        )}
+
+        {screen === 'saved' && (
+          <>
+            <h1 className="sm">My sheets</h1>
+            <div className="pagecat"><Cat mood="think" size={74} level={level} /><div className="bubble">Your saved sheets live here. Open one to see it again or download the PDF.</div></div>
+            {saved.length === 0 && <div className="note">Nothing saved yet. Solve a question and tap Save on the final sheet.</div>}
+            <div className="list">
+              {saved.map((s) => (
+                <button key={s.id} className="item" onClick={() => { const i = s.input; loadText(`A line ${i.n1}${i.n2}, ${i.L} mm long, ${i.theta === 0 ? 'is parallel to the HP' : `is inclined at ${i.theta}° to the HP`} ${i.phi === 0 ? 'and parallel to the VP' : `and inclined at ${i.phi}° to the VP`}. End ${i.n1} is ${i.ha ? `${i.ha} mm above the HP` : 'in the HP'} and ${i.da ? `${i.da} mm in front of the VP` : 'in the VP'}.`); }}>
+                  {s.title}<span>{new Date(s.created_at).toLocaleDateString()}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </main>
+
+      {vid && (
+        <div className="modal" onClick={() => setVid(false)}>
+          <div className="sheetm" onClick={(e) => e.stopPropagation()}>
+            <h3>Videos</h3>
+            {vids.map((v) => (
+              v.id ? <div key={v.label} className="vwrap"><iframe title={v.label} src={`https://www.youtube-nocookie.com/embed/${v.id}`} allow="encrypted-media; picture-in-picture" allowFullScreen /></div>
+                   : <a key={v.label} className="item" href={ytUrl(v)} target="_blank" rel="noreferrer">{v.label}<span>YouTube ↗</span></a>
+            ))}
+            <button className="btn ghost full" onClick={() => setVid(false)}>Close</button>
+          </div>
+        </div>
+      )}
+
+      <nav className="nav">
+        <button className={screen === 'scan' || screen === 'confirm' ? 'on' : ''} onClick={() => setScreen('scan')}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>Scan
+        </button>
+        <button className={screen === 'sheets' ? 'on' : ''} onClick={() => setScreen('sheets')}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="2" /><path d="M9 9h6M9 13h6M9 17h3" /></svg>Sheets
+        </button>
+        <button className={screen === 'steps' || screen === 'sheet' || screen === 'mistakes' ? 'on' : ''} disabled={!sol} onClick={() => setScreen('steps')}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 5h7a3 3 0 0 1 3 3v11a2 2 0 0 0-2-2H4zM20 5h-6" /></svg>Steps
+        </button>
+        <button className={screen === 'saved' ? 'on' : ''} onClick={openSaved}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2" /><path d="M4 10h16" /></svg>My sheets
+        </button>
+        <button onClick={() => loadText(randomQuestion())}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l2.5 5.5L20 9.5l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-1z" /></svg>Practice
+        </button>
+      </nav>
+    </div>
+    </div>
+  );
+}
