@@ -388,5 +388,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .lb li.me{border-color:var(--teal);background:#EAF6F5}
 .board,.delbox{display:flex;flex-direction:column;gap:10px}
 .btn.danger{color:#B42318;border-color:#F3C3BE}
-a.btn{text-decoration:none}
+a.btn{text-decoration:none;color:inherit}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* header must stay on one line on small phones */
+.top .brand>span,.xp{white-space:nowrap}
+@media (max-width:420px){.top{padding-left:14px;padding-right:14px}.top .brand{gap:6px}.top .brand>span{display:none}.hright{gap:6px}}

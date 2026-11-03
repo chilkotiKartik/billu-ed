@@ -183,7 +183,7 @@ export function Player({ sol, question }: { sol: Solution; question?: string }) 
   const mood: Mood = finished ? 'happy' : active ? 'point' : 'think';
   const pct = Math.round((Math.min(t, tl.total) / tl.total) * 100);
 
-  const seek = (v: number) => { setT(v); window.speechSynthesis?.cancel(); lastStep.current = -1; };
+  const seek = (v: number) => { setT(v >= tl.total - 0.06 ? tl.total : v); window.speechSynthesis?.cancel(); lastStep.current = -1; };
   const jump = (i: number) => { seek(tl.starts[Math.max(0, Math.min(sol.steps.length - 1, i))]); setPlaying(true); };
 
   return (

@@ -56,7 +56,7 @@ export function YtCard({ q }: { q: Q }) {
         <div className="ytlist">
           {items.slice(0, 4).map((v) => (
             <button key={v.id} className={`ytitem ${playing?.id === v.id ? 'now' : ''}`} onClick={() => setPlaying(v)}>
-              <span className="ytthumb"><img src={v.thumb} alt="" loading="lazy" /><span className="ytplay2">▶</span>{v.secs ? <em>{mins(v.secs)}</em> : null}</span>
+              <span className="ytthumb"><img src={v.thumb} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} /><span className="ytplay2">▶</span>{v.secs ? <em>{mins(v.secs)}</em> : null}</span>
               <span className="yttxt"><b>{v.title || 'Lecture video'}</b><small>{v.channel}{v.views ? ` · ${v.views >= 1000 ? Math.round(v.views / 1000) + 'K' : v.views} views` : ''}</small></span>
             </button>
           ))}

@@ -21,7 +21,7 @@ export type Prim =
   | { t: 'arc'; cx: number; cy: number; r: number; a0: number; a1: number; w?: LineStyle }
   | { t: 'circle'; cx: number; cy: number; r: number; w?: LineStyle }
   | { t: 'arrow'; x1: number; y1: number; x2: number; y2: number; n?: boolean }
-  | { t: 'text'; x: number; y: number; text: string; size?: number; anchor?: 'start' | 'middle' | 'end'; n?: boolean }
+  | { t: 'text'; x: number; y: number; text: string; size?: number; anchor?: 'start' | 'middle' | 'end'; n?: boolean; mm?: number } // mm: real letter height, scales with the drawing
   | { t: 'dim'; x1: number; y1: number; x2: number; y2: number; label: string; off?: number };
 
 export interface Step {
