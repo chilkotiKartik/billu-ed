@@ -56,13 +56,37 @@ export function Player({ sol, question }: { sol: Solution; question?: string }) 
   const [W, setW] = useState(342);
   const bb = useMemo(() => bbox([...sol.final, ...sol.steps.flatMap((x) => x.prims)]), [sol]);
   const asp = bb.h / Math.max(bb.w, 1);
-  const H = Math.round(Math.min(700, Math.max(300, W * (W > 520 ? Math.max(0.74, Math.min(0.95, asp)) : Math.max(0.92, Math.min(1.3, asp + 0.06)))))), pad = 14;
+  const [fs, setFs] = useState(false);
+  const [boxH, setBoxH] = useState(300);
+  const H = fs ? Math.max(200, boxH) : Math.round(Math.min(700, Math.max(300, W * (W > 520 ? Math.max(0.74, Math.min(0.95, asp)) : Math.max(0.92, Math.min(1.3, asp + 0.06)))))), pad = 14;
   const boxRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = boxRef.current; if (!el || typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(() => setW(Math.round(Math.min(960, Math.max(290, el.clientWidth)))));
+    const ro = new ResizeObserver(() => { setW(Math.round(Math.min(fs ? 2400 : 960, Math.max(290, el.clientWidth)))); setBoxH(Math.round(el.clientHeight)); });
     ro.observe(el); return () => ro.disconnect();
+  }, [fs]);
+  // big screen: real fullscreen + landscape where the phone allows it, else a fixed overlay (iPhone)
+  const openFs = async () => {
+    setFs(true);
+    try { await stageRef.current?.requestFullscreen?.(); } catch { /* overlay only */ }
+    try { await (screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> }).lock?.('landscape'); } catch { /* not allowed */ }
+  };
+  const closeFs = () => {
+    setFs(false);
+    try { screen.orientation?.unlock?.(); } catch { /* ignore */ }
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  };
+  useEffect(() => {
+    const f = () => { if (!document.fullscreenElement) { setFs(false); try { screen.orientation?.unlock?.(); } catch { /* ignore */ } } };
+    document.addEventListener('fullscreenchange', f); return () => document.removeEventListener('fullscreenchange', f);
   }, []);
+  useEffect(() => {
+    if (!fs) return;
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') closeFs(); };
+    document.body.style.overflow = 'hidden'; window.addEventListener('keydown', k);
+    return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', k); };
+  }, [fs]);
   const tl = useMemo(() => timeline(sol), [sol]);
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(true);
@@ -165,9 +189,9 @@ export function Player({ sol, question }: { sol: Solution; question?: string }) 
   return (
     <div className="player pl">
       {question && <div className={`card qcard ${qOpen ? 'open' : 'clamp'}`} onClick={() => setQOpen((v) => !v)}><span className="qt"><span className="qtag">The question</span>{question}</span><span className="more">{qOpen ? ' ▲ less' : ' … more ▼'}</span></div>}
-      <div className="card stage">
-        <div className="stagebar"><span className="live">{finished ? '✔ Finished' : playing ? '● Drawing live' : '❚❚ Paused'}</span><span>Step {si + 1} of {sol.steps.length} · {pct}%</span><button className="zoomb" onClick={() => setFollow((v) => !v)}>{follow ? '🔍 Zoom: follows step' : '🗺️ Whole sheet'}</button></div>
-        <div ref={boxRef}><svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Animated construction" style={{ display: 'block', margin: '0 auto' }}>
+      <div ref={stageRef} className={`card stage ${fs ? 'fs' : ''}`}>
+        <div className="stagebar"><span className="live">{finished ? '✔ Finished' : playing ? '● Drawing live' : '❚❚ Paused'}</span><span>Step {si + 1} of {sol.steps.length} · {pct}%</span><button className="zoomb" onClick={() => setFollow((v) => !v)}>{follow ? '🔍 Zoom: follows step' : '🗺️ Whole sheet'}</button><button className="zoomb" onClick={fs ? closeFs : openFs} aria-label={fs ? 'Exit full screen' : 'Full screen'}>{fs ? '✕ Exit' : '⛶ Full screen'}</button></div>
+        <div ref={boxRef} className="stagebox"><svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Animated construction" style={{ display: 'block', margin: '0 auto' }}>
           <defs>
             <filter id="rough" x="-2%" y="-2%" width="104%" height="104%"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="4" result="n" /><feDisplacementMap in="SourceGraphic" in2="n" scale="1.2" /></filter>
             <filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="2" dy="3" stdDeviation="2.2" floodColor="#3a2a10" floodOpacity=".28" /></filter>
@@ -231,6 +255,13 @@ export function Player({ sol, question }: { sol: Solution; question?: string }) 
           )}
           {tip && compass && <circle cx={tip[0]} cy={tip[1]} r="3" fill="#C2410C" />}
         </svg></div>
+        {fs && <div className="fsctrl">
+          <button className="cb" onClick={() => jump(si - 1)} aria-label="Previous step">⏮</button>
+          <button className="cb big" onClick={() => { if (finished) { setT(0); setPlaying(true); } else setPlaying((p) => !p); }} aria-label="Play or pause">{finished ? '↻' : playing ? '❚❚' : '▶'}</button>
+          <button className="cb" onClick={() => jump(si + 1)} aria-label="Next step">⏭</button>
+          <input className="scrub" type="range" min={0} max={tl.total} step={0.05} value={t} onChange={(e) => seek(Number(e.target.value))} aria-label="Timeline"
+            style={{ background: `linear-gradient(90deg,#C2410C ${pct}%,#E8E2D2 ${pct}%)` }} />
+        </div>}
         <div className="nowdraw" key={`${si}-${what?.what ?? 'w'}`}>{what ? <>✏️ <b>{what.what}</b>{what.len && <span> · {what.len}</span>}{active && <span className="pgrade" style={{ background: colOf(pencilOf(active.prim)) }}>{pencilOf(active.prim)} pencil</span>}{active && active.prim.t === 'line' && active.prim.w === 'hidden' && <span> · hidden line: dashes 3 mm, gaps 1 mm</span>}</> : finished ? '🎉 Drawing complete' : '🐾 Cat is thinking…'}</div>
       </div>
 

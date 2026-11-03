@@ -399,7 +399,9 @@ export default function Workspace() {
             {matched && <div className="note">{matched}</div>}
             {tab === 'lesson' && (
               <>
-                <Player sol={sol} question={qtext ?? curQ?.statement ?? text} />
+                {curQ?.topic === 'lettering'
+                  ? <><div className="card qcard"><span className="qtag">The question</span>{qtext ?? curQ.statement}</div><div className="card stage"><DrawingSvg sol={sol} upto={sol.steps.length - 1} /></div></>
+                  : <Player sol={sol} question={qtext ?? curQ?.statement ?? text} />}
                 {curQ && <YtCard q={curQ} />}
                 {curQ?.p && <button className="btn ghost full" onClick={() => { const v = variantOf(curQ); if (v) { setSol(v.sol); setQtext(v.statement); setStep(0); sfx('pop'); } }}>🎲 Try new numbers</button>}
                 <button className="btn primary full" onClick={() => { finish(); setScreen('sheet'); }}>See final sheet →</button>
