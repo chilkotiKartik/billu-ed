@@ -17,7 +17,8 @@ import { sfx, isMuted, setMuted } from '@/lib/sfx';
 import { added, catLine } from '@/lib/explain';
 import { parseQuestion } from '@/lib/parser';
 import { PRESETS, randomQuestion } from '@/lib/presets';
-import { kindOf } from '@/lib/solver';
+import { kindOf, validate, solve as solveLine } from '@/lib/solver';
+import { lineToSolution } from '@/lib/adapt';
 import { SHEETS, ALL as ALLQ, matchCatalog, variantOf, type Q } from '@/lib/catalog';
 import { VIDEOS, ytUrl, questionVideos } from '@/lib/videos';
 import { sheetLayout } from '@/lib/sheet';
@@ -247,22 +248,23 @@ export default function Workspace() {
     }
   }
 
-  async function solveNow() {
+  // The solver is exact maths with no secrets, so it runs right here on the phone: instant, and it works offline.
+  function solveNow() {
     setErr('');
+    const bad = validate(inp);
+    if (bad) { setErr(bad); return; }
     try {
-      const r = await fetch('/api/solve', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ input: inp }) });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error || 'Could not solve');
+      const solution = lineToSolution(solveLine({ ...inp, n1: inp.n1?.toUpperCase() || 'A', n2: inp.n2?.toUpperCase() || 'B' }));
       setQid('');
       setTab('lesson');
       setMatched('');
-      setSol(j.solution);
+      setSol(solution);
       setStep(0);
       setPlaying(false);
       setMsg('');
       setScreen('steps');
     } catch (e) {
-      setErr((e as Error).message);
+      setErr((e as Error).message || 'Could not solve this one. Please check the numbers.');
     }
   }
 
