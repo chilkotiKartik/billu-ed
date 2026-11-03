@@ -1,5 +1,5 @@
 import type { Prim, Solution, Step } from './types';
-import { ln, arc, circle, dim, S, text, callout, arrow, hatchRect } from './draw';
+import { ln, arc, circle, dim, S, text, textMM, callout, arrow, hatchRect } from './draw';
 
 /**
  * Sheet 1: the textbook figure "Types of lines" (Fig. 3-2): a lug with a base plate.
@@ -34,13 +34,21 @@ const cutting: Prim[] = [
   text(-14, 46, 'P', 0.9, 'end'), text(63, 46, 'P', 0.9, 'start'),
 ];
 
-/** Border and title block, like the real sheet. */
-const L = -66, B = -150, Rr = 150, T = 84;
+/**
+ * Border and title block of a real A3 sheet (420 x 297, landscape): 20 mm filing margin on the left,
+ * 10 mm on the other sides, so the border is 390 x 277. Title block 160 x 32 at the bottom right.
+ * The figure sits in the middle of the free space, drawn full size (1:1).
+ */
+const L = -145, R = 245, B = -167.5, T = B + 277;
+const TB = R - 160, TM = TB + 80, row = (i: number) => B + 8 * i;
 const frame: Prim[] = [
-  ln(L, B, Rr, B), ln(Rr, B, Rr, T), ln(Rr, T, L, T), ln(L, T, L, B),
-  ln(20, -118, Rr, -118, 'fine'), ln(20, -126, Rr, -126, 'fine'), ln(20, -134, Rr, -134, 'fine'), ln(20, -142, Rr, -142, 'fine'), ln(20, B, 20, -118, 'fine'), ln(85, B, 85, -126, 'fine'),
-  text(22, -124.5, 'TITLE: LINES AND DIMENSIONING', 0.62), text(22, -132.5, 'NAME:', 0.62), text(87, -132.5, 'BRANCH:', 0.62),
-  text(22, -140.5, 'SECTION:', 0.62), text(87, -140.5, 'SHEET NO: 01', 0.62), text(22, -148.5, 'DATE:', 0.62), text(87, -148.5, 'REMARK:', 0.62),
+  ln(L, B, R, B), ln(R, B, R, T), ln(R, T, L, T), ln(L, T, L, B),
+  ln(TB, row(4), R, row(4), 'fine'), ln(TB, row(3), R, row(3), 'fine'), ln(TB, row(2), R, row(2), 'fine'), ln(TB, row(1), R, row(1), 'fine'),
+  ln(TB, B, TB, row(4), 'fine'), ln(TM, B, TM, row(3), 'fine'),
+  textMM(TB + 3, row(3) + 1.5, 'TITLE: LINES AND DIMENSIONING', 5),
+  textMM(TB + 3, row(2) + 2.2, 'NAME:', 3.5), textMM(TM + 3, row(2) + 2.2, 'BRANCH:', 3.5),
+  textMM(TB + 3, row(1) + 2.2, 'SECTION:', 3.5), textMM(TM + 3, row(1) + 2.2, 'SHEET NO: 01', 3.5),
+  textMM(TB + 3, row(0) + 2.2, 'DATE:', 3.5), textMM(TM + 3, row(0) + 2.2, 'SCALE: 1:1', 3.5),
 ];
 
 /** A permanent name label: capital letters with a thin arrow to the line it names. */
@@ -51,16 +59,16 @@ const names: Prim[] = [
   ...name('CUTTING-PLANE LINE (H)', 44, 66, 61, 32),
   ...name('HIDDEN LINE (E)', 72, 24, 75, 6),
   ...name('DIMENSION LINE (B)', -8, -24, 10, -14.6, 'end'),
-  ...name('EXTENSION LINE (B)', 94, -26, 90.4, -12),
+  ...name('EXTENSION LINE (B)', 96, -18, 90.4, -12),
   ...name('SECTION LINE (D)', -8, -36, 6, -46, 'end'),
-  ...name('LEADER LINE (B)', 94, -34, 80, -50.5),
+  ...name('LEADER LINE (B)', 104, -31, 80, -50.5),
 ];
 
 export function sheet1Solution(id = 's1'): Solution {
   const steps: Step[] = [
     S('Border and title block', 'H pencil + scale',
-      'Draw the border with THICK lines about 10 mm inside the edge of the sheet (shown small here). Then draw the title block at the bottom right and write: title, name, branch, section, sheet number, date and remark. Use capital letters 3.5 mm high.',
-      frame, 'border 10 mm from the edge'),
+      'Keep the A3 sheet landscape (420 × 297). Draw the border with THICK lines: 20 mm from the left edge (space for filing) and 10 mm from the other three edges. Then draw the title block 160 × 32 at the bottom right and write the title, name, branch, section, sheet number, date and scale in capital letters (5 mm for the title, 3.5 mm for the rest).',
+      frame, 'border 390 × 277 · margins 20 left, 10 others · title block 160 × 32'),
     S('Line A: outline of the front view', 'H pencil, sharp',
       'Draw the visible edges with a continuous THICK line: the base plate 90 mm long and 10 mm thick, the lug 50 mm wide with a semicircular top of radius 25, and the hole Ø20 at the centre of the arc, 30 mm above the base.',
       [...fvOutline, ...callout('A · outline', -38, 24, -0.8, 18)], 'base 90 × 10 · lug 50 wide · R25 · hole Ø20'),
@@ -89,7 +97,8 @@ export function sheet1Solution(id = 's1'): Solution {
       'Write the name of each line in CAPITAL letters 3.5 mm high, with its letter (A, B, D, E, G, H) in brackets, and a thin arrow to the line it names. Keep the words clear of the drawing.',
       names, 'letter height 3.5 mm'),
   ];
-  const final: Prim[] = [...frame, ...fvOutline, ...pvOutline, ...hidden, ...centre, ...dims, ...leader, ...hatch, ...cutting, ...names];
+  // The border is part of the lesson (step 1), but not of `final`: the A3 sheet preview and the full-sheet pages draw their own border and title block.
+  const final: Prim[] = [...fvOutline, ...pvOutline, ...hidden, ...centre, ...dims, ...leader, ...hatch, ...cutting, ...names];
   steps.push(S('Check every line against the key', 'Eyes + scale', 'Compare each line with the key: A is the darkest, B and G are thin, E is dashed, D is thin hatching, H is a chain with thick ends. Fix the weight of each line before you finish.', final));
   return {
     id, title: 'Sheet 1 · Types of lines', steps, final,

@@ -19,6 +19,7 @@ export function added(prims: Prim[]): { what: string; len?: string }[] {
     else if (p.t === 'arc') { what = `Arc, radius ${R(p.r)} mm`; len = `${R(Math.abs(p.a1 - p.a0))}° sweep`; }
     else if (p.t === 'circle') { what = `Circle Ø${R(2 * p.r)} mm`; }
     else if (p.t === 'dim') { what = `Dimension ${p.label}`; len = `${R(Math.hypot(p.x2 - p.x1, p.y2 - p.y1))} mm measured`; }
+    else if (p.t === 'text') { what = `Lettering: ${p.text.length > 30 ? p.text.slice(0, 29) + '…' : p.text}`; len = p.mm ? `${p.mm} mm high` : undefined; }
     else if (p.t === 'arrow') { what = 'Leader / direction arrow'; len = `${R(Math.hypot(p.x2 - p.x1, p.y2 - p.y1))} mm`; }
     else continue;
     const key = what + (len ?? '');

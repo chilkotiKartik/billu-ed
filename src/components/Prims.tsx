@@ -81,7 +81,9 @@ export function Prims({ items, map, u, fs, dz, hi, sk = 0 }: { items: Prim[]; ma
           }
           case 'text': {
             const [x, y] = map(p.x, p.y);
-            return <text key={key} className={cls} x={x} y={y} fontSize={fs * 1.1 * (p.size ?? 1)} fontWeight={700} fill={ink} textAnchor={p.anchor ?? 'start'} paintOrder="stroke" stroke="#fff" strokeWidth={3.4 * u} strokeLinejoin="round">{p.text}</text>;
+            // mm text (title block) scales with the drawing so it always stays inside its box; other labels keep a readable screen size
+            const size = p.mm ? p.mm * Math.abs(map(1, 0)[0] - map(0, 0)[0]) : fs * 1.1 * (p.size ?? 1);
+            return <text key={key} className={cls} x={x} y={y} fontSize={size} fontWeight={700} fill={ink} textAnchor={p.anchor ?? 'start'} paintOrder="stroke" stroke="#fff" strokeWidth={3.4 * u} strokeLinejoin="round">{p.text}</text>;
           }
           case 'dim': {
             const dx = p.x2 - p.x1, dy = p.y2 - p.y1, len = Math.hypot(dx, dy) || 1;

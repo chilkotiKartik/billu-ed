@@ -12,6 +12,8 @@ export const arc = (cx: number, cy: number, r: number, a0: number, a1: number, w
 export const circle = (cx: number, cy: number, r: number, w: LineStyle = 'thick'): Prim => ({ t: 'circle', cx, cy, r, w });
 export const arrow = (x1: number, y1: number, x2: number, y2: number): Prim => ({ t: 'arrow', x1, y1, x2, y2 });
 export const text = (x: number, y: number, t: string, size = 1, anchor: 'start' | 'middle' | 'end' = 'start'): Prim => ({ t: 'text', x, y, text: t, size, anchor });
+/** Lettering with a real height in mm (e.g. 3.5 mm in a title block), so it always stays inside its box at any zoom. */
+export const textMM = (x: number, y: number, t: string, mm: number, anchor: 'start' | 'middle' | 'end' = 'start'): Prim => ({ t: 'text', x, y, text: t, mm, anchor });
 export const dim = (x1: number, y1: number, x2: number, y2: number, label: string, off = 7): Prim => ({ t: 'dim', x1, y1, x2, y2, label, off });
 export const S = (title: string, tool: string, why: string, prims: Prim[], calc?: string): Step => ({ title, tool, why, prims, calc });
 
