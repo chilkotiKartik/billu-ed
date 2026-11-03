@@ -64,6 +64,7 @@ export function Sidebar({ open, onClose, done, qid, screen, flowAt, level, onNav
             );
           })}
         </div>
+        <p className="sidecredit">Made with 🧡 by <b>Kartik Chilkoti</b> · © 2026<br /><a href="/copyright">Copyright &amp; credits</a> · <a href="/privacy">Privacy</a></p>
       </aside>
     </>
   );

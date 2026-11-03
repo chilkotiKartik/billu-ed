@@ -403,3 +403,47 @@ a.btn{text-decoration:none;color:inherit}
 .zbar button:disabled{opacity:.4;cursor:default}
 .zbar span{min-width:92px;text-align:center;font-size:13px;font-weight:600;color:var(--mut)}
 .zscroll{overflow:auto;-webkit-overflow-scrolling:touch;border-radius:10px;background:#fff;overscroll-behavior:contain;touch-action:pan-x pan-y pinch-zoom}
+
+/* ---- landing: sheet cards ---- */
+.sgrid{display:grid;gap:16px;grid-template-columns:1fr;max-width:1120px;margin:0 auto}
+.scard{position:relative;background:#fff;border:2px solid var(--ink);border-radius:20px;padding:18px 18px 16px;overflow:hidden;transition:transform .2s,box-shadow .2s;display:flex;flex-direction:column;gap:10px}
+.scard::before{content:'';position:absolute;inset:0 0 auto 0;height:6px;background:var(--sc)}
+.scard:hover{transform:translateY(-4px);box-shadow:6px 8px 0 rgba(27,35,64,.14)}
+.shead{display:flex;align-items:center;gap:12px}
+.sic{width:46px;height:46px;flex:none;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;background:color-mix(in srgb,var(--sc) 16%,#fff);border:1.5px solid color-mix(in srgb,var(--sc) 45%,#fff)}
+.shead small{display:block;font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--sc)}
+.shead h3{margin:2px 0 0;font-size:19px;letter-spacing:-.3px;text-transform:none;color:var(--ink);line-height:1.2}
+.scount{margin-left:auto;align-self:flex-start;font-size:12px;font-weight:700;white-space:nowrap;padding:5px 10px;border-radius:999px;background:#F5F2EA;color:var(--mut)}
+.sblurb{margin:0;font-size:14.5px;line-height:1.5;color:#2A2F45}
+.sqs{list-style:none;margin:0;padding:10px 0 0;border-top:1px dashed var(--line);display:flex;flex-direction:column;gap:7px}
+.sqs li{display:flex;gap:10px;align-items:baseline;font-size:14px;line-height:1.35}
+.sqs li b{flex:none;min-width:44px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--sc)}
+.sqs li span{color:#2A2F45}
+.sqs li.more{color:var(--mut);font-weight:600;font-size:13px;padding-left:54px}
+
+/* ---- landing: level track ---- */
+.lvsec{background:linear-gradient(180deg,#FFF8EC,#F5F2EA)}
+.lvtrack{list-style:none;margin:0 auto;padding:0;max-width:1000px;display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.lvtrack li{position:relative;background:#fff;border:2px solid var(--line);border-radius:18px;padding:14px 10px 12px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:3px}
+.lvtrack li:last-child{grid-column:1/-1;border-color:#F4A340;background:linear-gradient(160deg,#FFF6E6,#FFE7C2)}
+.lvcat{height:82px;display:flex;align-items:flex-end}
+.lvtrack b{font-size:14.5px}
+.lvtrack span{font-size:12.5px;color:var(--mut)}
+.lvtrack em{font-style:normal;margin-top:4px;font-size:12px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:#fff;background:linear-gradient(90deg,#F4A340,#E0607E);border-radius:999px;padding:3px 10px}
+
+/* ---- site footer ---- */
+.sfoot{background:#1B2340;color:#C9CEE3;padding:40px max(16px,calc(50% - 560px)) 22px;margin-top:0}
+.sfoot a{color:#C9CEE3;text-decoration:none}.sfoot a:hover{color:#fff;text-decoration:underline}
+.sfin{display:grid;gap:26px;grid-template-columns:1fr 1fr}
+.sbrand{grid-column:1/-1}
+.sbrand .brand{color:#fff;font-size:22px}
+.sbrand p{margin:10px 0 0;max-width:420px;font-size:14px;line-height:1.55}
+.scol{display:flex;flex-direction:column;gap:9px;font-size:14.5px}
+.scol b{color:#fff;font-size:13px;letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px}
+.sbottom{display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:space-between;align-items:center;border-top:1px solid #313B66;margin-top:30px;padding-top:18px;font-size:13.5px}
+.sbottom .made b{color:#FFD08A}
+.legal .credit{font-size:17px;padding:12px 16px;border-radius:14px;background:#FFF6E6;border:1.5px solid #F4A340}
+@media (min-width:700px){.sgrid{grid-template-columns:1fr 1fr}.lvtrack{grid-template-columns:repeat(5,1fr)}.lvtrack li:last-child{grid-column:auto}.sfin{grid-template-columns:2fr 1fr 1fr}.sbrand{grid-column:auto}}
+@media (min-width:1100px){.sgrid{grid-template-columns:repeat(4,1fr)}}
+.sidecredit{margin:14px 6px 6px;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;line-height:1.6;color:var(--mut);text-align:center}
+.sidecredit a,.aboutcredit a{color:var(--teal);text-decoration:none;font-weight:600}

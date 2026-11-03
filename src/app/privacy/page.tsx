@@ -1,9 +1,11 @@
 import Link from 'next/link';
+import { SiteFooter } from '@/components/SiteFooter';
 
 export const metadata = { title: 'Privacy · ED Cat' };
 
 export default function Privacy() {
   return (
+    <>
     <main className="legal">
       <Link href="/">← Home</Link>
       <h1>Privacy</h1>
@@ -25,5 +27,7 @@ export default function Privacy() {
       <p>You can delete any saved sheet inside the app. In <b>Trophies → My data</b> you can download everything we keep about you, or delete your account and all your data for good.</p>
       <p>We do not sell data or show ads.</p>
     </main>
+    <SiteFooter />
+    </>
   );
 }
