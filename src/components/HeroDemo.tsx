@@ -26,8 +26,8 @@ export default function HeroDemo() {
             <circle cx="120" cy="76" r="4" fill="#1B2340" /><circle cx="250" cy="104" r="4" fill="#1B2340" /><circle cx="120" cy="214" r="4" fill="#1B2340" /><circle cx="250" cy="214" r="4" fill="#1B2340" />
             <text x="96" y="74" className="hl">a′</text><text x="258" y="102" className="hl">b′</text><text x="96" y="222" className="hl">a</text><text x="258" y="222" className="hl">b</text>
             <text x="22" y="140" className="hx">X</text><text x="364" y="140" className="hx">Y</text>
-            <rect x="152" y="62" width="76" height="22" rx="11" fill="#C2410C" /><text x="190" y="77" textAnchor="middle" className="hp">TL = 134 mm</text>
-            <rect x="140" y="226" width="90" height="22" rx="11" fill="#0B7A75" /><text x="185" y="241" textAnchor="middle" className="hp">FV = 130 mm</text>
+            <rect x="138" y="62" width="104" height="22" rx="11" fill="#C2410C" /><text x="190" y="77" textAnchor="middle" className="hp">TL = 134 mm</text>
+            <rect x="133" y="226" width="104" height="22" rx="11" fill="#0B7A75" /><text x="185" y="241" textAnchor="middle" className="hp">FV = 130 mm</text>
           </g>
         </g>
         <g className="hdpencil"><g transform="rotate(35)"><polygon points="0,0 -5,-15 5,-15" fill="#F3D3A0" /><polygon points="0,0 -1.8,-5 1.8,-5" fill="#2B1B12" /><rect x="-5" y="-54" width="10" height="39" fill="#F4A340" /><rect x="-5" y="-60" width="10" height="6" fill="#C9CED8" /><rect x="-5" y="-67" width="10" height="7" rx="2" fill="#E0607E" /></g></g>

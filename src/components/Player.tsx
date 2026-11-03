@@ -244,7 +244,8 @@ export function Player({ sol, question }: { sol: Solution; question?: string }) 
           })()}
           {active && active.prim.t === 'line' && (() => {
             const p = active.prim, L = Math.hypot(p.x2 - p.x1, p.y2 - p.y1), cur = Math.round(L * active.k);
-            return <g fontFamily="Arial"><rect x={W / 2 - 62} y="8" width="124" height="24" rx="12" fill="#C2410C" /><text x={W / 2} y="25" fontSize="13.5" fontWeight={800} fill="#fff" textAnchor="middle">Length {cur} / {Math.round(L)} mm</text></g>;
+            const label = `Length ${cur} / ${Math.round(L)} mm`, pw = Math.ceil(label.length * 8.6) + 28; // pill grows with the text (bold 13.5 px ≈ 8.6 px per character)
+            return <g fontFamily="Arial, Helvetica, sans-serif"><rect x={W / 2 - pw / 2} y="8" width={pw} height="26" rx="13" fill="#C2410C" /><text x={W / 2} y="26" fontSize="13.5" fontWeight={800} fill="#fff" textAnchor="middle">{label}</text></g>;
           })()}
           {tip && !compass && (
             <g transform={`translate(${tip[0]},${tip[1]}) rotate(${35 + Math.sin(t * 11) * 1.6})`} filter="url(#sh)">
@@ -257,7 +258,7 @@ export function Player({ sol, question }: { sol: Solution; question?: string }) 
           {tip && <circle cx={tip[0]} cy={tip[1]} r={7 + Math.sin(t * 9) * 1.5} fill="url(#tipglow)" pointerEvents="none" />}
           {si > 0 && t - tl.starts[si] < 1.3 && (() => {
             const k = (t - tl.starts[si]) / 1.3, sc = 0.7 + Math.min(1, k * 4) * 0.3;
-            return <g transform={`translate(${W - 74},${44}) scale(${sc})`} opacity={k < 0.75 ? 1 : (1 - k) * 4} fontFamily="Arial"><rect x="-62" y="-14" width="124" height="28" rx="14" fill="#15803D" /><text y="5" fontSize="13" fontWeight={800} fill="#fff" textAnchor="middle">✓ Step {si} done</text></g>;
+            return <g transform={`translate(${W - 84},${44}) scale(${sc})`} opacity={k < 0.75 ? 1 : (1 - k) * 4} fontFamily="Arial, Helvetica, sans-serif"><rect x="-74" y="-14" width="148" height="28" rx="14" fill="#15803D" /><text y="5" fontSize="13" fontWeight={800} fill="#fff" textAnchor="middle">✓ Step {si} done</text></g>;
           })()}
           {tip && compass && <circle cx={tip[0]} cy={tip[1]} r="3" fill="#C2410C" />}
         </svg></div>
