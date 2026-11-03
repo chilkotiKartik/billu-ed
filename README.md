@@ -42,7 +42,7 @@ Without it the app still works; progress and sheets stay on the student's phone.
 1. Create a Supabase project and run `supabase/migrations/0001_init.sql` in the SQL editor (or `supabase db push`).
 2. Pick one:
    - **Direct:** set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel.
-   - **Edge function (safer):** `supabase secrets set EDCAT_FN_TOKEN=<long random>`, deploy `supabase/edcat-sheets.ts` with JWT verification off, and set `SUPABASE_URL` + the same `EDCAT_FN_TOKEN` in Vercel. The function refuses to run without a strong token.
+   - **Edge function (safer):** `supabase secrets set EDCAT_FN_TOKEN=<long random>`, run `supabase functions deploy edcat-sheets` (folder `supabase/functions/edcat-sheets`, JWT check is off via `supabase/config.toml`), and set `SUPABASE_URL` + the same `EDCAT_FN_TOKEN` in Vercel. The function refuses to run without a strong token.
 3. Every table has row-level security on with no policies, so browsers can never read it. Only the server reaches it, and every query is scoped to the signed-in Clerk user id.
 
 What gets stored: sheets (up to 100 per student), progress (finished questions, XP, streak, badge counters), name and roll number for the title block, and feedback messages. Progress **merges** between phone and account (union of finished questions, best counters), so a student never loses work by switching devices.

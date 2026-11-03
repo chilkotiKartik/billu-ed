@@ -1,0 +1,3 @@
+# Used by the Supabase CLI. The app authenticates with EDCAT_FN_TOKEN, not a Supabase JWT.
+[functions.edcat-sheets]
+verify_jwt = false
