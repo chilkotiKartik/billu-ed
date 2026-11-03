@@ -22,7 +22,7 @@ async function search(query: string): Promise<{ items: Item[]; reason?: string }
 /** Lecture videos for THIS question: pinned picks first, then live YouTube search (needs YOUTUBE_API_KEY), then plain search links. */
 export function YtCard({ q }: { q: Q }) {
   const links = questionVideos(q);
-  const pins: Item[] = ((pinned as Record<string, { id: string; title: string; channel: string }[]>)[q.id || ''] || []).map((p) => ({ ...p, thumb: `https://i.ytimg.com/vi/${p.id}/mqdefault.jpg` }));
+  const pins: Item[] = ((pinned as Record<string, { id: string; title: string; channel: string }[]>)[q.id || ''] || (pinned as Record<string, { id: string; title: string; channel: string }[]>)[q.topic] || []).map((p) => ({ ...p, thumb: `https://i.ytimg.com/vi/${p.id}/mqdefault.jpg` }));
   const [tab, setTab] = useState<'q' | 'topic'>('q');
   const [items, setItems] = useState<Item[]>(pins);
   const [state, setState] = useState<'load' | 'ok' | 'none'>(pins.length ? 'ok' : 'load');
@@ -47,7 +47,7 @@ export function YtCard({ q }: { q: Q }) {
       {playing && (
         <div className="ytplayer">
           <div className="vwrap"><iframe title={playing.title} src={`https://www.youtube-nocookie.com/embed/${playing.id}?autoplay=1&rel=0&modestbranding=1`} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /></div>
-          <div className="ytnow"><b>{playing.title}</b><span>{playing.channel}</span><button className="btn ghost" onClick={() => setPlaying(null)}>✕ Close video</button></div>
+          <div className="ytnow"><b>{playing.title}</b><span>{playing.channel}</span><a className="btn ghost" href={`https://www.youtube.com/watch?v=${playing.id}`} target="_blank" rel="noreferrer">Open in YouTube ↗</a><button className="btn ghost" onClick={() => setPlaying(null)}>✕ Close video</button></div>
         </div>
       )}
 

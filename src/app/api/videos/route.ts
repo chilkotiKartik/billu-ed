@@ -11,8 +11,9 @@ const TTL = 7 * 24 * 3600 * 1000;
 const secs = (iso: string) => { const m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso) || []; return (+(m[1] || 0)) * 3600 + (+(m[2] || 0)) * 60 + +(m[3] || 0); };
 
 export async function GET(req: Request) {
-  const { userId } = auth();
-  if (!userId) return NextResponse.json({ error: 'Please sign in.' }, { status: 401 });
+  // signed-out visitors may search too; they are rate limited by IP
+  const { userId: uid } = auth();
+  const userId = uid || `ip:${(req.headers.get('x-forwarded-for') || 'anon').split(',')[0].trim()}`;
   const q = (new URL(req.url).searchParams.get('q') || '').trim().slice(0, 160);
   if (!q) return NextResponse.json({ error: 'Missing q' }, { status: 400 });
   const key = process.env.YOUTUBE_API_KEY;
