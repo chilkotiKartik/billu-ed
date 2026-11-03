@@ -233,7 +233,7 @@ body{background-image:radial-gradient(circle at 20% 10%,#FFE9C7 0,transparent 40
 .pl>.catrow{margin:0}
 .pl>.catrow .catbox svg{width:64px;height:64px}
 .pl>.catrow .bubble{font-size:14.5px;line-height:1.5}
-.pl>.ctrl{position:sticky;bottom:8px;z-index:6;box-shadow:0 8px 28px rgba(27,35,64,.22);background:#fff}
+.pl>.ctrl{position:static;z-index:6;box-shadow:0 4px 14px rgba(27,35,64,.12);background:#fff} /* below the drawing, never on top of it */
 .pgrade{display:inline-block;color:#fff;font-weight:800;font-size:11px;border-radius:999px;padding:1px 8px;margin-left:6px}
 .pencils summary{cursor:pointer;font-weight:700;font-size:13.5px}
 .pencils table{border-collapse:collapse;margin-top:8px;font-size:13px}.pencils td{padding:5px 6px 5px 0;vertical-align:top}.pencils td:first-child{white-space:nowrap}
@@ -393,3 +393,13 @@ a.btn{text-decoration:none;color:inherit}
 /* header must stay on one line on small phones */
 .top .brand>span,.xp{white-space:nowrap}
 @media (max-width:420px){.top{padding-left:14px;padding-right:14px}.top .brand{gap:6px}.top .brand>span{display:none}.hright{gap:6px}}
+.tbedit summary{cursor:pointer;font-weight:600;font-size:14px;min-height:28px;display:flex;align-items:center}
+.tbedit[open]{display:flex;flex-direction:column;gap:10px}
+/* zoomable sheet: crisp vector at any zoom, scrolls on phones */
+.zoombox{display:flex;flex-direction:column;gap:8px}
+.zbar{display:flex;align-items:center;gap:8px}
+.zbar button{min-width:44px;min-height:40px;border:1px solid var(--line);background:#fff;border-radius:12px;font-size:20px;font-weight:700;cursor:pointer;color:var(--ink)}
+.zbar button.fit{margin-left:auto;font-size:14px;padding:0 14px}
+.zbar button:disabled{opacity:.4;cursor:default}
+.zbar span{min-width:92px;text-align:center;font-size:13px;font-weight:600;color:var(--mut)}
+.zscroll{overflow:auto;-webkit-overflow-scrolling:touch;border-radius:10px;background:#fff;overscroll-behavior:contain;touch-action:pan-x pan-y pinch-zoom}

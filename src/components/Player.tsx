@@ -193,7 +193,6 @@ export function Player({ sol, question }: { sol: Solution; question?: string }) 
         <div className="stagebar"><span className="live">{finished ? '✔ Finished' : playing ? '● Drawing live' : '❚❚ Paused'}</span><span>Step {si + 1} of {sol.steps.length} · {pct}%</span><button className="zoomb" onClick={() => setFollow((v) => !v)}>{follow ? '🔍 Zoom: follows step' : '🗺️ Whole sheet'}</button><button className="zoomb" onClick={fs ? closeFs : openFs} aria-label={fs ? 'Exit full screen' : 'Full screen'}>{fs ? '✕ Exit' : '⛶ Full'}</button></div>
         <div ref={boxRef} className="stagebox"><svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Animated construction" style={{ display: 'block', margin: '0 auto' }}>
           <defs>
-            <filter id="rough" x="-2%" y="-2%" width="104%" height="104%"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="4" result="n" /><feDisplacementMap in="SourceGraphic" in2="n" scale="1.2" /></filter>
             <filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="2" dy="3" stdDeviation="2.2" floodColor="#3a2a10" floodOpacity=".28" /></filter>
             <filter id="glow" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur in="SourceGraphic" stdDeviation="2.4" result="b" /><feColorMatrix in="b" values="0 0 0 0 .95  0 0 0 0 .45  0 0 0 0 .1  0 0 0 .55 0" result="g" /><feMerge><feMergeNode in="g" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
             <radialGradient id="tipglow"><stop offset="0" stopColor="#FFB347" stopOpacity=".9" /><stop offset="1" stopColor="#FFB347" stopOpacity="0" /></radialGradient>
@@ -224,7 +223,7 @@ export function Player({ sol, question }: { sol: Solution; question?: string }) 
               </g>
             );
           })()}
-          <g filter="url(#rough)"><Prims items={[...shownDone, ...cur]} hi={shownDone.length} sk={0} map={map} u={1.15} fs={12.5} dz={Math.min(s, 1.8)} />
+          <g><Prims items={[...shownDone, ...cur]} hi={shownDone.length} sk={0} map={map} u={1.15} fs={12.5} dz={Math.min(s, 1.8)} />
           {active && (
             <g opacity={geom(active.prim) ? 1 : active.k} filter={geom(active.prim) ? 'url(#glow)' : undefined}>
               <Prims items={[partial(active.prim, active.k)]} hi={0} map={map} u={1.15} fs={12.5} dz={Math.min(s, 1.8)} />

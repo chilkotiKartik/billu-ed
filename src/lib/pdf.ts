@@ -10,8 +10,9 @@ export async function sheetToPdf(svg: SVGSVGElement, name: string, paper: 'A1' |
   });
   const c = document.createElement('canvas');
   const [pw, ph] = paper === 'A1' ? [841, 594] : [420, 297];
-  c.width = pw * 4;
-  c.height = ph * 4;
+  const px = paper === 'A1' ? 5 : 8; // pixels per mm: sharp when printed or zoomed (A1 ≈ 4200 × 2970, under phone canvas limits)
+  c.width = pw * px;
+  c.height = ph * px;
   const g = c.getContext('2d')!;
   g.fillStyle = '#fff';
   g.fillRect(0, 0, c.width, c.height);
@@ -19,6 +20,7 @@ export async function sheetToPdf(svg: SVGSVGElement, name: string, paper: 'A1' |
   URL.revokeObjectURL(url);
   const { jsPDF } = await import('jspdf');
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: paper === 'A1' ? 'a1' : 'a3' });
-  pdf.addImage(c.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pw, ph);
+  // PNG keeps thin lines and small letters crisp (JPEG smears them)
+  pdf.addImage(c.toDataURL('image/png'), 'PNG', 0, 0, pw, ph, undefined, 'FAST');
   pdf.save(`${name}.pdf`);
 }
