@@ -1,10 +1,11 @@
 import { Prims } from './Prims';
+import { TitleBlock, TB_W, TB_H, drawingNoOf } from './TitleBlock';
 import { layoutPage, PAPER, scaleLabel, type Page, type Paper } from '@/lib/fullsheet';
 
 const INK = '#1B2340';
 
 /** A real-looking A3 sheet: margins, every question labelled and drawn to one scale, and a title block. */
-export function FullSheetSvg({ page, svgRef, name = '', roll = '', paper = 'A3' }: { paper?: Paper; page: Page; svgRef?: React.RefObject<SVGSVGElement | null>; name?: string; roll?: string }) {
+export function FullSheetSvg({ page, svgRef, name = '', roll = '', institution = '', paper = 'A3' }: { paper?: Paper; page: Page; svgRef?: React.RefObject<SVGSVGElement | null>; name?: string; roll?: string; institution?: string }) {
   const { placed, scale } = layoutPage(page, paper);
   const [W, H] = PAPER[paper], k = W / 420, tb = W / 420; // tb: title block grows with the paper
   const sc = scaleLabel(scale);
@@ -12,23 +13,7 @@ export function FullSheetSvg({ page, svgRef, name = '', roll = '', paper = 'A3' 
     <svg ref={svgRef} xmlns="http://www.w3.org/2000/svg" viewBox={`0 0 ${W} ${H}`} width={W} height={H} style={{ width: '100%', height: 'auto', display: 'block', background: '#fff' }} fontFamily="Arial, sans-serif" role="img" aria-label={`${page.title}, ${page.part}`}>
       <rect width={W} height={H} fill="#fff" />
       <rect x="20" y="10" width={W - 30} height={H - 20} fill="none" stroke={INK} strokeWidth={0.8 * k} />
-      <g transform={`translate(${W - 420 * tb},${H - 297 * tb}) scale(${tb})`}>
-      <g stroke={INK} strokeWidth="0.4" fill="none">
-        <rect x="190" y="257" width="220" height="30" />
-        <line x1="190" y1="267" x2="410" y2="267" /><line x1="190" y1="277" x2="410" y2="277" />
-        <line x1="300" y1="257" x2="300" y2="287" /><line x1="355" y1="257" x2="355" y2="287" />
-      </g>
-      <g fill={INK} fontSize="3.6">
-        <text x="192" y="263" fontWeight="700">{page.title.toUpperCase()} · {paper}</text>
-        <text x="192" y="273">{page.part}</text>
-        <text x="192" y="283">NAME: {name}</text>
-        <text x="302" y="263">SCALE  {sc}</text>
-        <text x="302" y="273">FIRST ANGLE</text>
-        <text x="302" y="283">ROLL NO: {roll}</text>
-        <text x="357" y="263">DIMS IN mm</text>
-        <text x="357" y="273">DATE:</text>
-        <text x="357" y="283">SIGN:</text>
-      </g></g>
+      <TitleBlock x={W - 10 - TB_W * tb} y={H - 10 - TB_H * tb} k={tb} info={{ institution, drawingNo: drawingNoOf(page.sheetId), title: `${page.title.replace(' · ', ': ')} — ${page.part}`, scale: sc, name, roll }} />
       {placed.map((p, i) => {
         const w = p.bb.w * p.s, h = p.bb.h * p.s;
         const x0 = p.x + (p.w - w) / 2, y0 = p.y + 12 * k + (p.h - 18 * k - h) / 2;

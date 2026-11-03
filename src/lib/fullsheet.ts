@@ -9,7 +9,7 @@ export interface Placed { q: Q; sol: Solution; s: number; x: number; y: number; 
 export type Paper = 'A1' | 'A3';
 export const PAPER: Record<Paper, [number, number]> = { A3: [420, 297], A1: [841, 594] };
 // free drawing area: inside the border, above the title block (which grows with the paper)
-export const areaOf = (p: Paper = 'A3') => { const k = PAPER[p][0] / 420; return { x: 26, y: 16, w: PAPER[p][0] - 42, h: PAPER[p][1] - 26 - 35 * k }; };
+export const areaOf = (p: Paper = 'A3') => { const k = PAPER[p][0] / 420; return { x: 26, y: 16, w: PAPER[p][0] - 42, h: PAPER[p][1] - 26 - 48 * k }; };
 export const scaleLabel = (s: number) => (s >= 1 ? `${+s.toFixed(2)} : 1` : `1 : ${+(1 / s).toFixed(2)}`);
 // Only standard BIS / IS 10713 scales (what a student may write in the title block):
 // 2 : 1 enlargement when the page has room, else full size, else 1 : 2, 1 : 5.

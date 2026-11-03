@@ -9,6 +9,7 @@ import { YtCard } from './YtCard';
 import { Sidebar, type Nav } from './Sidebar';
 import { About } from './About';
 import { FullSheetSvg } from './FullSheet';
+import { TitleBlock, TB_W, TB_H, drawingNoOf } from './TitleBlock';
 import { pages } from '@/lib/fullsheet';
 import { Challenge } from './Challenge';
 import { Quiz } from './Quiz';
@@ -42,22 +43,16 @@ function Logo({ level }: { level: number }) {
   return <Cat mood="idle" size={40} level={level} />;
 }
 
-function SheetSvg({ sol, svgRef }: { sol: Solution; svgRef: React.RefObject<SVGSVGElement | null> }) {
+function SheetSvg({ sol, svgRef, name, roll, institution }: { sol: Solution; svgRef: React.RefObject<SVGSVGElement | null>; name: string; roll: string; institution: string }) {
   const lay = sheetLayout(sol);
   const map = (x: number, y: number): [number, number] => [lay.ox + x * lay.s, lay.oy - y * lay.s];
+  const title = sol.header[1] ? `${sol.header[0]}: ${sol.header[1]}` : sol.header[0];
   return (
     <svg ref={svgRef} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 297" width="420" height="297" style={{ width: '100%', height: 'auto', display: 'block', background: '#fff' }} fontFamily="Arial, sans-serif" role="img" aria-label="A3 drawing sheet">
       <rect width="420" height="297" fill="#fff" />
-      <rect x="10" y="10" width="400" height="277" fill="none" stroke="#1B2340" strokeWidth="0.8" />
-      <rect x="250" y="257" width="160" height="30" fill="none" stroke="#1B2340" strokeWidth="0.5" />
-      <line x1="345" y1="257" x2="345" y2="287" stroke="#1B2340" strokeWidth="0.4" />
-      <text x="254" y="265" fontSize="3.6" fontWeight="700" fill="#1B2340">{sol.header[0]}</text>
-      <text x="254" y="272" fontSize="3.2" fill="#1B2340">{sol.header[1]}</text>
-      <text x="254" y="279" fontSize="3.2" fill="#1B2340">{sol.header[2]}</text>
-      <text x="349" y="265" fontSize="3.2" fill="#1B2340">Scale {lay.label}</text>
-      <text x="349" y="272" fontSize="3.2" fill="#1B2340">First angle</text>
-      <text x="349" y="279" fontSize="3.2" fill="#1B2340">Dims in mm</text>
+      <rect x="20" y="10" width="390" height="277" fill="none" stroke="#1B2340" strokeWidth="0.8" />
       <Prims items={sol.final} map={map} u={0.26} fs={3.6} dz={1} />
+      <TitleBlock x={410 - TB_W} y={287 - TB_H} info={{ institution, drawingNo: drawingNoOf(sol.id), title, scale: lay.label.replace(':', ' : '), name, roll }} />
     </svg>
   );
 }
@@ -98,6 +93,9 @@ export default function Workspace() {
   const [pg, setPg] = useState(0);
   const [pname, setPname] = useState('');
   const [proll, setProll] = useState('');
+  const [inst, setInst] = useState('AKIT TANAKPUR — ED LAB');
+  useEffect(() => { try { const v = localStorage.getItem('edcat.inst'); if (v !== null) setInst(v); } catch { /* ignore */ } }, []);
+  useEffect(() => { try { localStorage.setItem('edcat.inst', inst); } catch { /* ignore */ } }, [inst]);
   const [nick, setNick] = useState('');
   const [onBoard, setOnBoard] = useState(false);
   const [board, setBoard] = useState<BoardRow[] | null | 'off'>(null);
@@ -437,17 +435,18 @@ export default function Workspace() {
         {screen === 'full' && (
           <>
             <h1 className="sm">Full drawing sheets</h1>
-            <div className="pagecat"><Cat mood="happy" size={74} level={level} /><div className="bubble">Here is your whole sheet on A1 or A3 paper. Every drawing is 1:1, so you can copy it straight onto your paper!</div></div>
+            <div className="pagecat"><Cat mood="happy" size={74} level={level} /><div className="bubble">Here is your whole sheet on A1 or A3 paper. Every drawing uses one standard scale, written in the title block.</div></div>
             <div className="tabs"><button className={paper === 'A1' ? 'on' : ''} onClick={() => setPaper('A1')}>A1 sheet</button><button className={paper === 'A3' ? 'on' : ''} onClick={() => setPaper('A3')}>A3 sheet</button></div>
             <div className="tabs scroll">
               {allPages.map((p, i) => <button key={i} className={pg === i ? 'on' : ''} onClick={() => setPg(i)}>{p.title.split(' · ')[0]}{allPages.filter((x) => x.sheetId === p.sheetId).length > 1 ? ` · ${p.part.split(' · ')[0]}` : ''}</button>)}
             </div>
-            <div className="card sheet paper3"><FullSheetSvg paper={paper} page={allPages[pg]} svgRef={fullRef} name={pname} roll={proll} /></div>
+            <div className="card sheet paper3"><FullSheetSvg paper={paper} page={allPages[pg]} svgRef={fullRef} name={pname} roll={proll} institution={inst} /></div>
             <div className="grid2">
-              <label className="field"><span>Your name</span><input value={pname} onChange={(e) => setPname(e.target.value)} /></label>
-              <label className="field"><span>Roll no.</span><input value={proll} onChange={(e) => setProll(e.target.value)} /></label>
+              <label className="field"><span>Your name</span><input value={pname} maxLength={60} onChange={(e) => setPname(e.target.value)} /></label>
+              <label className="field"><span>Roll no.</span><input value={proll} maxLength={30} onChange={(e) => setProll(e.target.value)} /></label>
             </div>
-            <div className="note">Every question on this page is drawn to one scale. Tap Download to get the PDF, then copy each drawing at 1:1 on your own sheet.</div>
+            <label className="field"><span>Institution (title block)</span><input value={inst} maxLength={60} onChange={(e) => setInst(e.target.value)} /></label>
+            <div className="note">Every question on this page is drawn to the scale in the title block (2 : 1 means twice full size). Dimensions always show the true size. Tap Download to get the PDF.</div>
             <button className="btn primary full big" onClick={async () => { if (!fullRef.current) return; try { await sheetToPdf(fullRef.current, `ED-${allPages[pg].sheetId}-page${pg + 1}-${paper}`, paper); } catch { /* ignore */ } }}>Download this page as PDF</button>
           </>
         )}
@@ -543,7 +542,14 @@ export default function Workspace() {
             <div className="confetti" aria-hidden="true">{Array.from({ length: 24 }, (_, i) => <i key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i % 8) * 0.15}s`, background: ['#F4A340', '#0B7A75', '#E0607E', '#C2410C'][i % 4] }} />)}</div>
             <CatSays mood="happy" k="done">Purr-fect! All {n} steps done. Download the PDF and copy it onto your A3 sheet. 🎉</CatSays>
             {sol.plan && <div className="card info plan"><h3>🧠 How we cracked it</h3><ol>{sol.plan.map((x, i) => <li key={i}>{x}</li>)}</ol></div>}
-            <div className="card sheet"><SheetSvg sol={sol} svgRef={sheetRef} /></div>
+            <details className="card info tbedit"><summary>✏️ Title block: name, roll no., institution</summary>
+            <div className="grid2">
+              <label className="field"><span>Your name</span><input value={pname} maxLength={60} onChange={(e) => setPname(e.target.value)} /></label>
+              <label className="field"><span>Roll no.</span><input value={proll} maxLength={30} onChange={(e) => setProll(e.target.value)} /></label>
+            </div>
+            <label className="field"><span>Institution (title block)</span><input value={inst} maxLength={60} onChange={(e) => setInst(e.target.value)} /></label>
+            </details>
+            <div className="card sheet"><SheetSvg sol={sol} svgRef={sheetRef} name={pname} roll={proll} institution={inst} /></div>
             {sol.results.map((r, i) => (
               <div key={i} className="card calc2"><span>{r.label}</span><b>{r.value}</b></div>
             ))}

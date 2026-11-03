@@ -393,3 +393,5 @@ a.btn{text-decoration:none;color:inherit}
 /* header must stay on one line on small phones */
 .top .brand>span,.xp{white-space:nowrap}
 @media (max-width:420px){.top{padding-left:14px;padding-right:14px}.top .brand{gap:6px}.top .brand>span{display:none}.hright{gap:6px}}
+.tbedit summary{cursor:pointer;font-weight:600;font-size:14px;min-height:28px;display:flex;align-items:center}
+.tbedit[open]{display:flex;flex-direction:column;gap:10px}
