@@ -9,6 +9,7 @@ import { YtCard } from './YtCard';
 import { Sidebar, type Nav } from './Sidebar';
 import { About } from './About';
 import { FullSheetSvg } from './FullSheet';
+import { ZoomBox } from './ZoomBox';
 import { TitleBlock, TB_W, TB_H, drawingNoOf } from './TitleBlock';
 import { pages } from '@/lib/fullsheet';
 import { Challenge } from './Challenge';
@@ -51,7 +52,7 @@ function SheetSvg({ sol, svgRef, name, roll, institution }: { sol: Solution; svg
     <svg ref={svgRef} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 297" width="420" height="297" style={{ width: '100%', height: 'auto', display: 'block', background: '#fff' }} fontFamily="Arial, sans-serif" role="img" aria-label="A3 drawing sheet">
       <rect width="420" height="297" fill="#fff" />
       <rect x="20" y="10" width="390" height="277" fill="none" stroke="#1B2340" strokeWidth="0.8" />
-      <Prims items={sol.final} map={map} u={0.26} fs={3.6} dz={1} />
+      <Prims items={sol.final} map={map} u={0.32} fs={4.6} dz={1} />
       <TitleBlock x={410 - TB_W} y={287 - TB_H} info={{ institution, drawingNo: drawingNoOf(sol.id), title, scale: lay.label.replace(':', ' : '), name, roll }} />
     </svg>
   );
@@ -440,7 +441,7 @@ export default function Workspace() {
             <div className="tabs scroll">
               {allPages.map((p, i) => <button key={i} className={pg === i ? 'on' : ''} onClick={() => setPg(i)}>{p.title.split(' · ')[0]}{allPages.filter((x) => x.sheetId === p.sheetId).length > 1 ? ` · ${p.part.split(' · ')[0]}` : ''}</button>)}
             </div>
-            <div className="card sheet paper3"><FullSheetSvg paper={paper} page={allPages[pg]} svgRef={fullRef} name={pname} roll={proll} institution={inst} /></div>
+            <div className="card sheet paper3"><ZoomBox key={`${paper}-${pg}`} phoneZoom={paper === 'A1' ? 2.6 : 2} focus={[0.3, 0.32]}><FullSheetSvg paper={paper} page={allPages[pg]} svgRef={fullRef} name={pname} roll={proll} institution={inst} /></ZoomBox></div>
             <div className="grid2">
               <label className="field"><span>Your name</span><input value={pname} maxLength={60} onChange={(e) => setPname(e.target.value)} /></label>
               <label className="field"><span>Roll no.</span><input value={proll} maxLength={30} onChange={(e) => setProll(e.target.value)} /></label>
@@ -549,7 +550,7 @@ export default function Workspace() {
             </div>
             <label className="field"><span>Institution (title block)</span><input value={inst} maxLength={60} onChange={(e) => setInst(e.target.value)} /></label>
             </details>
-            <div className="card sheet"><SheetSvg sol={sol} svgRef={sheetRef} name={pname} roll={proll} institution={inst} /></div>
+            <div className="card sheet"><ZoomBox phoneZoom={2.6} focus={[0.51, 0.43]}><SheetSvg sol={sol} svgRef={sheetRef} name={pname} roll={proll} institution={inst} /></ZoomBox></div>
             {sol.results.map((r, i) => (
               <div key={i} className="card calc2"><span>{r.label}</span><b>{r.value}</b></div>
             ))}
