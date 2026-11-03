@@ -45,6 +45,22 @@ async function viaRest(op: Op, table: Table, userId: string, o: Opts): Promise<R
   return op === 'select' ? ((await r.json()) as Row[]) : [];
 }
 
+/** Whitelisted read-only database functions that look across users (e.g. the opt-in leaderboard). */
+export async function rpc(name: 'edcat_leaderboard', args: Record<string, number>): Promise<Row[] | null> {
+  if (!dbEnabled()) return null;
+  try {
+    if (fnToken()) {
+      const r = await fetch(`${url()}/functions/v1/edcat-sheets`, { method: 'POST', cache: 'no-store', headers: { 'content-type': 'application/json', 'x-edcat-token': fnToken()! }, body: JSON.stringify({ op: 'rpc', name, args, userId: 'system' }) });
+      const j = r.ok ? await r.json() : null;
+      return j?.ok ? (j.data as Row[]) : null;
+    }
+    const r = await fetch(`${url()}/rest/v1/rpc/${name}`, { method: 'POST', cache: 'no-store', headers: { apikey: key()!, Authorization: `Bearer ${key()}`, 'content-type': 'application/json' }, body: JSON.stringify(args) });
+    return r.ok ? ((await r.json()) as Row[]) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Returns rows, or null when the database is off or the call failed (callers then fall back to the device). */
 export async function db(op: Op, table: Table, userId: string, o: Opts = {}): Promise<Row[] | null> {
   if (!dbEnabled() || !ID.test(userId)) return null;

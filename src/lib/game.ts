@@ -1,7 +1,7 @@
 import { ALL } from './catalog';
-export interface Game { xp: number; streak: number; last: string; tapOk: number; quizOk: number; variants: number }
+export interface Game { xp: number; streak: number; last: string; tapOk: number; quizOk: number; variants: number; daily: string }
 const KEY = 'edcat.game';
-export const EMPTY: Game = { xp: 0, streak: 0, last: '', tapOk: 0, quizOk: 0, variants: 0 };
+export const EMPTY: Game = { xp: 0, streak: 0, last: '', tapOk: 0, quizOk: 0, variants: 0, daily: '' };
 export const LEVELS = ['Kitten', 'Scribbler', 'Sharp Paw', 'Drafter', 'Master Cat', 'Legend'];
 export const levelOf = (xp: number) => Math.min(6, 1 + Math.floor(Math.sqrt(xp / 40)));
 export function progress(xp: number) {
@@ -10,7 +10,7 @@ export function progress(xp: number) {
   const a = 40 * (l - 1) ** 2, b = 40 * l ** 2;
   return { pct: Math.round((100 * (xp - a)) / (b - a)), next: b };
 }
-const day = () => new Date().toLocaleDateString('en-CA');
+export const day = () => new Date().toLocaleDateString('en-CA');
 export function load(): Game {
   try {
     const g = { ...EMPTY, ...JSON.parse(localStorage.getItem(KEY) || '{}') } as Game;

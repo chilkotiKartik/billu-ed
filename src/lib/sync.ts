@@ -31,9 +31,9 @@ export async function pushProgress(p: Progress): Promise<boolean> {
   return !!r;
 }
 
-export interface Profile { name: string; roll: string }
+export interface Profile { name: string; roll: string; nick: string; onBoard: boolean }
 export const loadProfileLocal = (): Profile => {
-  try { const v = JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}'); return { name: String(v.name ?? ''), roll: String(v.roll ?? '') }; } catch { return { name: '', roll: '' }; }
+  try { const v = JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}'); return { name: String(v.name ?? ''), roll: String(v.roll ?? ''), nick: String(v.nick ?? ''), onBoard: v.onBoard === true }; } catch { return { name: '', roll: '', nick: '', onBoard: false }; }
 };
 export const saveProfileLocal = (p: Profile) => { try { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch { /* ignore */ } };
 export async function pullProfile(): Promise<Profile | null> {
@@ -51,4 +51,23 @@ export async function sendFeedback(f: { kind: 'wrong-step' | 'unclear' | 'idea' 
     if (j.ok) return 'sent';
     return r.ok ? 'off' : 'error';
   } catch { return 'error'; }
+}
+
+export interface BoardRow { rank: number; nick: string; xp: number; me: boolean }
+export async function getLeaderboard(): Promise<BoardRow[] | null> {
+  const r = await call<{ items: BoardRow[] }>('/api/leaderboard');
+  return r ? r.items : null;
+}
+
+export async function deleteAccount(): Promise<string | null> {
+  try {
+    const r = await fetch('/api/account', { method: 'DELETE', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ confirm: 'DELETE' }) });
+    const j = await r.json();
+    return j.ok ? null : j.error || 'Could not delete your account.';
+  } catch { return 'Could not reach the server.'; }
+}
+
+/** Clears everything ED Cat keeps on this phone. */
+export function clearDevice() {
+  try { for (const k of Object.keys(localStorage)) if (k.startsWith('edcat.') || k.startsWith('edbuddy.')) localStorage.removeItem(k); } catch { /* ignore */ }
 }
