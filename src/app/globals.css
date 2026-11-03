@@ -345,3 +345,12 @@ body{background-image:radial-gradient(circle at 20% 10%,#FFE9C7 0,transparent 40
 @keyframes shim{to{background-position:-200% 0}}
 .ytmore{display:block;text-align:center;margin-top:10px;font-weight:700;font-size:13.5px;color:#E0302B;text-decoration:none}
 .ytfallback .small{margin:0 0 8px}
+
+/* full-screen drawing (landscape on phones) */
+.stage.fs{position:fixed;inset:0;z-index:1000;margin:0;border-radius:0;display:flex;flex-direction:column;padding:6px 8px calc(6px + env(safe-area-inset-bottom));max-width:none;width:100vw;height:100vh;height:100dvh}
+.stage.fs .stagebox{flex:1;min-height:0}
+.stage.fs svg{width:100%;height:100%;max-height:none!important}
+.stage.fs .nowdraw{display:none}
+.fsctrl{display:flex;align-items:center;gap:8px;padding-top:6px}
+.fsctrl .cb{min-width:44px;height:40px}
+.fsctrl .scrub{flex:1}
