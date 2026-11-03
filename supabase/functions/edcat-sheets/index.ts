@@ -21,7 +21,13 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ ok: false }, 405);
   if (!safeEqual(req.headers.get('x-edcat-token') ?? '', TOKEN)) return json({ ok: false }, 401);
 
-  const { op, table, userId, match = {}, values = {}, select = '*', order, limit = 50 } = await req.json();
+  const body = await req.json();
+  if (body.op === 'rpc') {
+    if (body.name !== 'edcat_leaderboard') return json({ ok: false }, 400);
+    const { data, error } = await db.rpc('edcat_leaderboard', { lim: Math.min(Number(body.args?.lim) || 20, 100) });
+    return error ? json({ ok: false }, 500) : json({ ok: true, data });
+  }
+  const { op, table, userId, match = {}, values = {}, select = '*', order, limit = 50 } = body;
   if (typeof userId !== 'string' || !userId || !TABLES.has(table)) return json({ ok: false }, 400);
   for (const k of Object.keys(match)) if (!COL.test(k)) return json({ ok: false }, 400);
 

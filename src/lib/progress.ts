@@ -14,6 +14,7 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     tapOk: Math.max(a.game.tapOk, b.game.tapOk),
     quizOk: Math.max(a.game.quizOk, b.game.quizOk),
     variants: Math.max(a.game.variants, b.game.variants),
+    daily: (a.game.daily || '') >= (b.game.daily || '') ? a.game.daily || '' : b.game.daily || '',
   };
   return { done, game };
 }
@@ -21,6 +22,6 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
 export const sameProgress = (a: Progress, b: Progress) =>
   a.done.length === b.done.length && a.done.every((x) => b.done.includes(x)) &&
   a.game.xp === b.game.xp && a.game.streak === b.game.streak && a.game.last === b.game.last &&
-  a.game.tapOk === b.game.tapOk && a.game.quizOk === b.game.quizOk && a.game.variants === b.game.variants;
+  a.game.tapOk === b.game.tapOk && a.game.quizOk === b.game.quizOk && a.game.variants === b.game.variants && a.game.daily === b.game.daily;
 
 export const toApi = (p: Progress): ProgressData => ({ done: p.done, game: p.game });

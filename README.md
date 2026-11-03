@@ -39,7 +39,7 @@ CI (`.github/workflows/ci.yml`) runs typecheck, tests, `npm audit` and a build o
 
 Without it the app still works; progress and sheets stay on the student's phone. To turn it on:
 
-1. Create a Supabase project and run `supabase/migrations/0001_init.sql` in the SQL editor (or `supabase db push`).
+1. Create a Supabase project and run `supabase/migrations/0001_init.sql`, then `0002_leaderboard.sql`, in the SQL editor (or `supabase db push`).
 2. Pick one:
    - **Direct:** set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel.
    - **Edge function (safer):** `supabase secrets set EDCAT_FN_TOKEN=<long random>`, run `supabase functions deploy edcat-sheets` (folder `supabase/functions/edcat-sheets`, JWT check is off via `supabase/config.toml`), and set `SUPABASE_URL` + the same `EDCAT_FN_TOKEN` in Vercel. The function refuses to run without a strong token.
@@ -50,6 +50,17 @@ What gets stored: sheets (up to 100 per student), progress (finished questions, 
 ### Shared rate limiting (Upstash, recommended)
 
 Serverless instances do not share memory, so set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (free tier is enough). Without them limits are per instance.
+
+## Student features
+
+- **Lessons:** animated pencil, ruler and compass replay of every step, steps list, "Your turn" point placing, cat quiz, new-numbers practice, A1/A3 sheets and PDF.
+- **Daily challenge:** one question per day, the same for everyone, +20 bonus XP.
+- **Progress everywhere:** XP, streak, badges and finished questions sync across phones.
+- **Leaderboard (opt-in):** nickname + XP only, off by default.
+- **My data:** download everything as JSON, or delete the account and all data (Trophies screen).
+- **Report a mistake:** on every step, stored in `feedback`.
+- **Offline:** the app screen and the built-in sheets open with no internet once visited.
+- **Analytics:** Vercel Analytics and Speed Insights (cookie-free). Turn them on in the Vercel project's Analytics tab.
 
 ## Install on a phone
 
@@ -65,7 +76,7 @@ Set `YOUTUBE_API_KEY`, or pin videos once with `YOUTUBE_API_KEY=xxx npx tsx scri
 - `src/lib/progress.ts`, `sync.ts`, `store.ts`: progress merge, account sync, saved sheets
 - `src/lib/schemas.ts`: zod validation for every API body
 - `src/lib/server/`: `http.ts` (auth, rate limit, validation), `ratelimit.ts`, `db.ts` (Supabase client)
-- `src/app/api/*`: `solve`, `read`, `sheets`, `progress`, `profile`, `feedback`, `videos`, `health`
+- `src/app/api/*`: `solve`, `read`, `sheets`, `progress`, `profile`, `feedback`, `leaderboard`, `account`, `videos`, `health`
 - `src/proxy.ts`: Clerk route protection
 - `supabase/`: migrations and the optional edge function
 - `scripts/`: preview and render helpers used during development

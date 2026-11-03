@@ -18,9 +18,11 @@ export default function Privacy() {
       <ul>
         <li>Photos are read on your device with OCR. A small copy is sent to Google Gemini only if the on-device reader could not find every number and the feature is switched on.</li>
         <li>Video lectures play from YouTube (privacy-enhanced mode).</li>
+        <li>Anonymous page-speed and visit counts (Vercel Analytics, no cookies, no personal data).</li>
+        <li>The leaderboard is off unless you switch it on; it shows only the nickname you choose and your XP.</li>
       </ul>
       <h2>Your control</h2>
-      <p>You can delete any saved sheet inside the app. To delete your account and data, ask your lecturer or the app owner, or delete your account from the profile menu.</p>
+      <p>You can delete any saved sheet inside the app. In <b>Trophies → My data</b> you can download everything we keep about you, or delete your account and all your data for good.</p>
       <p>We do not sell data or show ads.</p>
     </main>
   );

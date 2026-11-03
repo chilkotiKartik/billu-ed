@@ -21,6 +21,7 @@ export const gameSchema = z.object({
   tapOk: num(0, 100_000),
   quizOk: num(0, 100_000),
   variants: num(0, 100_000),
+  daily: z.string().max(10).optional().default(''),
 });
 
 export const progressSchema = z.object({
@@ -31,6 +32,9 @@ export const progressSchema = z.object({
 export const profileSchema = z.object({
   name: z.string().trim().max(60),
   roll: z.string().trim().max(30),
+  // leaderboard nickname: letters, digits, spaces, _ and - only (no links or symbols)
+  nick: z.string().trim().max(24).regex(/^[\p{L}\p{N} _-]*$/u).optional().default(''),
+  onBoard: z.boolean().optional().default(false),
 });
 
 export const saveSheetSchema = z.object({ title: z.string().trim().min(1).max(120), input: lineInput });

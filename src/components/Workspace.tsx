@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { UserButton } from '@clerk/nextjs';
+import { UserButton, useClerk } from '@clerk/nextjs';
+import { dailyQuestion, DAILY_XP } from '@/lib/daily';
 import { DrawingSvg, Prims } from './Prims';
 import { Cat, CatSays } from './Cat';
 import { Player } from './Player';
@@ -11,7 +12,7 @@ import { FullSheetSvg } from './FullSheet';
 import { pages } from '@/lib/fullsheet';
 import { Challenge } from './Challenge';
 import { Quiz } from './Quiz';
-import { EMPTY, BADGES, LEVELS, levelOf, progress, save as saveGame, type Game } from '@/lib/game';
+import { day, EMPTY, BADGES, LEVELS, levelOf, progress, save as saveGame, type Game } from '@/lib/game';
 import { sfx, isMuted, setMuted } from '@/lib/sfx';
 import { added, catLine } from '@/lib/explain';
 import { parseQuestion } from '@/lib/parser';
@@ -25,7 +26,7 @@ import { askAI, missingOf } from '@/lib/ai';
 import { sheetToPdf } from '@/lib/pdf';
 import { pencilsOf, colOf } from '@/lib/pencil';
 import { listSheets, saveSheet, deleteSheet, renameSheet, type Saved } from '@/lib/store';
-import { loadLocal, saveLocal, pullProgress, pushProgress, loadProfileLocal, saveProfileLocal, pullProfile, pushProfile, sendFeedback } from '@/lib/sync';
+import { loadLocal, saveLocal, pullProgress, pushProgress, loadProfileLocal, saveProfileLocal, pullProfile, pushProfile, sendFeedback, getLeaderboard, deleteAccount, clearDevice, type BoardRow } from '@/lib/sync';
 import { sameProgress } from '@/lib/progress';
 import type { LineInput, Solution } from '@/lib/types';
 
@@ -96,6 +97,13 @@ export default function Workspace() {
   const [pg, setPg] = useState(0);
   const [pname, setPname] = useState('');
   const [proll, setProll] = useState('');
+  const [nick, setNick] = useState('');
+  const [onBoard, setOnBoard] = useState(false);
+  const [board, setBoard] = useState<BoardRow[] | null | 'off'>(null);
+  const [delAsk, setDelAsk] = useState('');
+  const [delErr, setDelErr] = useState('');
+  const { signOut } = useClerk();
+  const daily = useMemo(() => dailyQuestion(), []);
   const fullRef = useRef<SVGSVGElement>(null);
   const [paper, setPaper] = useState<'A1' | 'A3'>('A1');
   const allPages = useMemo(() => pages(), []);
@@ -119,6 +127,8 @@ export default function Workspace() {
     const prof = loadProfileLocal();
     setPname(prof.name);
     setProll(prof.roll);
+    setNick(prof.nick);
+    setOnBoard(prof.onBoard);
     (async () => {
       const merged = await pullProgress(local);
       if (dead) return;
@@ -132,7 +142,7 @@ export default function Workspace() {
         setSync('offline');
       }
       const rp = await pullProfile();
-      if (!dead && rp && (rp.name || rp.roll)) { setPname(rp.name); setProll(rp.roll); saveProfileLocal(rp); }
+      if (!dead && rp && (rp.name || rp.roll || rp.nick)) { setPname(rp.name); setProll(rp.roll); setNick(rp.nick); setOnBoard(rp.onBoard); saveProfileLocal(rp); }
       ready.current = true;
     })();
     return () => { dead = true; };
@@ -149,17 +159,21 @@ export default function Workspace() {
 
   useEffect(() => {
     if (!ready.current) return;
-    const p = { name: pname, roll: proll };
+    const p = { name: pname, roll: proll, nick, onBoard };
     saveProfileLocal(p);
     const t = setTimeout(() => { void pushProfile(p); }, 1500);
     return () => clearTimeout(t);
-  }, [pname, proll]);
+  }, [pname, proll, nick, onBoard]);
 
   function markDone(id: string) {
     setDone((d) => (d.includes(id) ? d : [...d, id]));
   }
 
   function finish() {
+    if (qid === daily.id && game.daily !== day()) {
+      setGame((g) => ({ ...g, daily: day() }));
+      setTimeout(() => award(DAILY_XP, 'Daily challenge done 🗓️'), 900);
+    }
     if (sol?.id.endsWith('-v')) { award(15, 'New numbers solved', 'variant'); sfx('win'); return; }
     if (qid && !done.includes(qid)) { markDone(qid); award(30, 'Question finished'); sfx('win'); }
   }
@@ -311,6 +325,11 @@ export default function Workspace() {
           <>
             <CatSays mood="happy" k="hero">Meow! I am Pixel, level {level}. Show me your ED question and I will draw it with you, one step at a time. 🐾</CatSays>
             <button className="card homexp" onClick={() => setScreen('trophies')}><b>Level {level} · {LEVELS[level - 1]}</b><span>{game.xp} XP · {game.streak} day streak 🔥 · {done.length}/{totalQ} done</span><div className="meter"><i style={{ width: `${progress(game.xp).pct}%` }} /></div></button>
+            <button className={`card daily ${game.daily === day() ? 'done' : ''}`} onClick={() => openQ(daily, game.daily === day() ? 'You already finished today’s challenge. Practice makes perfect!' : `Today’s challenge: finish it for +${DAILY_XP} bonus XP.`)}>
+              <span className="dicon" aria-hidden="true">{game.daily === day() ? '✅' : '🗓️'}</span>
+              <span className="dtext"><b>Today’s challenge</b><small>{daily.code} · {daily.title}</small></span>
+              <span className="dxp">{game.daily === day() ? 'Done' : `+${DAILY_XP} XP`}</span>
+            </button>
             <h1>Snap the question.<br /><span className="acc">Get every step.</span></h1>
             <div className="finder">
               {busy ? (
@@ -385,6 +404,31 @@ export default function Workspace() {
               {BADGES.map((b) => { const on = b.test(game, done); return (<div key={b.id} className={`badge ${on ? 'on' : ''}`}><span>{on ? b.icon : '🔒'}</span><b>{b.name}</b><small>{b.desc}</small></div>); })}
             </div>
             <div className="card info"><h3>Cat wardrobe</h3><p className="small">Level 2 glasses · Level 3 graduation cap · Level 4 scarf · Level 5 crown.</p></div>
+
+            <h3>Leaderboard</h3>
+            <div className="card info board">
+              <p className="small">Optional. Only your nickname and XP are shown, never your real name.</p>
+              <label className="field"><span>Nickname (letters and numbers)</span><input value={nick} maxLength={24} onChange={(e) => setNick(e.target.value.replace(/[^\p{L}\p{N} _-]/gu, ''))} placeholder="e.g. SharpPaw22" /></label>
+              <label className="switch"><input type="checkbox" checked={onBoard} disabled={!nick.trim()} onChange={(e) => setOnBoard(e.target.checked)} /> Show me on the leaderboard</label>
+              <button className="btn ghost full" onClick={async () => { setBoard(null); const r = await getLeaderboard(); setBoard(r ?? 'off'); }}>{board ? 'Refresh leaderboard' : 'Show leaderboard'}</button>
+              {board === 'off' && <div className="note">The leaderboard is not switched on for this app yet.</div>}
+              {Array.isArray(board) && (board.length === 0 ? <div className="note">Nobody is on the board yet. Be the first!</div> : (
+                <ol className="lb">{board.map((r) => <li key={r.rank} className={r.me ? 'me' : ''}><span>{r.rank <= 3 ? ['🥇', '🥈', '🥉'][r.rank - 1] : r.rank}</span><b>{r.nick}{r.me ? ' (you)' : ''}</b><i>{r.xp} XP</i></li>)}</ol>
+              ))}
+            </div>
+
+            <h3>My data</h3>
+            <div className="card info">
+              <p className="small">Download everything ED Cat keeps about you, or delete your account for good.</p>
+              <a className="btn ghost full" href="/api/account" download>⬇️ Download my data</a>
+              {delAsk === '' ? <button className="btn ghost full danger" onClick={() => { setDelAsk(' '); setDelErr(''); }}>Delete my account</button> : (
+                <form className="delbox" onSubmit={async (e) => { e.preventDefault(); setDelErr(''); const err = await deleteAccount(); if (err) { setDelErr(err); return; } clearDevice(); await signOut({ redirectUrl: '/' }); }}>
+                  <label className="field"><span>Type DELETE to remove your progress, sheets and account</span><input value={delAsk.trim()} onChange={(e) => setDelAsk(e.target.value || ' ')} autoCapitalize="characters" /></label>
+                  {delErr && <div className="note">{delErr}</div>}
+                  <div className="row2"><button type="button" className="btn ghost" onClick={() => setDelAsk('')}>Cancel</button><button className="btn primary" disabled={delAsk.trim() !== 'DELETE'}>Delete forever</button></div>
+                </form>
+              )}
+            </div>
           </>
         )}
 

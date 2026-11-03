@@ -1,4 +1,5 @@
 import { mergeProgress } from '../src/lib/progress';
+import { dailyQuestion } from '../src/lib/daily';
 import { lineInput, progressSchema, feedbackSchema, profileSchema } from '../src/lib/schemas';
 import { allow } from '../src/lib/server/ratelimit';
 import { db, dbEnabled } from '../src/lib/server/db';
@@ -112,7 +113,7 @@ for (const q of ALL) {
 
 // ---- v6: progress merge, API schemas, rate limiter ----
 (async () => {
-  const g = (o: Partial<import('../src/lib/game').Game>) => ({ xp: 0, streak: 0, last: '', tapOk: 0, quizOk: 0, variants: 0, ...o });
+  const g = (o: Partial<import('../src/lib/game').Game>) => ({ xp: 0, streak: 0, last: '', tapOk: 0, quizOk: 0, variants: 0, daily: '', ...o });
   const m = mergeProgress({ done: ['a', 'b'], game: g({ xp: 50, last: '2026-01-01', streak: 2, tapOk: 3 }) }, { done: ['b', 'c'], game: g({ xp: 80, last: '2026-01-05', streak: 1, quizOk: 4 }) });
   ok(m.done.length === 3 && ['a', 'b', 'c'].every((x) => m.done.includes(x)), 'merge keeps every finished question');
   ok(m.game.xp === 80 && m.game.tapOk === 3 && m.game.quizOk === 4, 'merge keeps the best counters');
@@ -125,7 +126,12 @@ for (const q of ALL) {
   ok(progressSchema.safeParse({ done: ['s1'], game: g({}) }).success, 'progress schema accepts good data');
   ok(!progressSchema.safeParse({ done: new Array(501).fill('x'), game: g({}) }).success, 'progress schema caps size');
   ok(!feedbackSchema.safeParse({ kind: 'bug', message: 'x' }).success, 'feedback needs a real message');
-  ok(profileSchema.safeParse({ name: ' Asha ', roll: '22ED01' }).success, 'profile ok');
+  ok(profileSchema.safeParse({ name: ' Asha ', roll: '22ED01' }).success, 'profile ok (old clients without nickname)');
+  ok(profileSchema.safeParse({ name: '', roll: '', nick: 'Sharp Paw_22', onBoard: true }).success, 'nickname ok');
+  ok(!profileSchema.safeParse({ name: '', roll: '', nick: '<script>', onBoard: true }).success, 'nickname symbols rejected');
+  ok(dailyQuestion('2026-11-03').id === dailyQuestion('2026-11-03').id, 'daily question is stable for a day');
+  ok(new Set(['2026-11-01', '2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05'].map((d) => dailyQuestion(d).id)).size > 1, 'daily question rotates');
+  ok(mergeProgress({ done: [], game: g({ daily: '2026-11-03' }) }, { done: [], game: g({ daily: '' }) }).game.daily === '2026-11-03', 'merge keeps daily bonus date');
 
   let allowed = 0;
   for (let i = 0; i < 8; i++) if (await allow('test-key', 5)) allowed++;
