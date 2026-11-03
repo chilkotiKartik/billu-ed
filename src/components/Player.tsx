@@ -190,11 +190,13 @@ export function Player({ sol, question }: { sol: Solution; question?: string }) 
     <div className="player pl">
       {question && <div className={`card qcard ${qOpen ? 'open' : 'clamp'}`} onClick={() => setQOpen((v) => !v)}><span className="qt"><span className="qtag">The question</span>{question}</span><span className="more">{qOpen ? ' ▲ less' : ' … more ▼'}</span></div>}
       <div ref={stageRef} className={`card stage ${fs ? 'fs' : ''}`}>
-        <div className="stagebar"><span className="live">{finished ? '✔ Finished' : playing ? '● Drawing live' : '❚❚ Paused'}</span><span>Step {si + 1} of {sol.steps.length} · {pct}%</span><button className="zoomb" onClick={() => setFollow((v) => !v)}>{follow ? '🔍 Zoom: follows step' : '🗺️ Whole sheet'}</button><button className="zoomb" onClick={fs ? closeFs : openFs} aria-label={fs ? 'Exit full screen' : 'Full screen'}>{fs ? '✕ Exit' : '⛶ Full screen'}</button></div>
+        <div className="stagebar"><span className="live">{finished ? '✔ Finished' : playing ? '● Drawing live' : '❚❚ Paused'}</span><span>Step {si + 1} of {sol.steps.length} · {pct}%</span><button className="zoomb" onClick={() => setFollow((v) => !v)}>{follow ? '🔍 Zoom: follows step' : '🗺️ Whole sheet'}</button><button className="zoomb" onClick={fs ? closeFs : openFs} aria-label={fs ? 'Exit full screen' : 'Full screen'}>{fs ? '✕ Exit' : '⛶ Full'}</button></div>
         <div ref={boxRef} className="stagebox"><svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Animated construction" style={{ display: 'block', margin: '0 auto' }}>
           <defs>
             <filter id="rough" x="-2%" y="-2%" width="104%" height="104%"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="4" result="n" /><feDisplacementMap in="SourceGraphic" in2="n" scale="1.2" /></filter>
             <filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="2" dy="3" stdDeviation="2.2" floodColor="#3a2a10" floodOpacity=".28" /></filter>
+            <filter id="glow" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur in="SourceGraphic" stdDeviation="2.4" result="b" /><feColorMatrix in="b" values="0 0 0 0 .95  0 0 0 0 .45  0 0 0 0 .1  0 0 0 .55 0" result="g" /><feMerge><feMergeNode in="g" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+            <radialGradient id="tipglow"><stop offset="0" stopColor="#FFB347" stopOpacity=".9" /><stop offset="1" stopColor="#FFB347" stopOpacity="0" /></radialGradient>
             <linearGradient id="wood" x1="0" x2="1"><stop offset="0" stopColor="#E8962F" /><stop offset=".5" stopColor="#FFC25E" /><stop offset="1" stopColor="#D9822A" /></linearGradient>
             <pattern id="pg" width={10 * s} height={10 * s} x={ox % (10 * s)} y={oy % (10 * s)} patternUnits="userSpaceOnUse"><path d={`M${10 * s} 0H0V${10 * s}`} fill="none" stroke="#EADFC4" strokeWidth=".6" /></pattern>
             <pattern id="pg5" width={50 * s} height={50 * s} x={ox % (50 * s)} y={oy % (50 * s)} patternUnits="userSpaceOnUse"><path d={`M${50 * s} 0H0V${50 * s}`} fill="none" stroke="#D9C79B" strokeWidth=".9" /></pattern>
@@ -224,7 +226,7 @@ export function Player({ sol, question }: { sol: Solution; question?: string }) 
           })()}
           <g filter="url(#rough)"><Prims items={[...shownDone, ...cur]} hi={shownDone.length} sk={0} map={map} u={1.15} fs={12.5} dz={Math.min(s, 1.8)} />
           {active && (
-            <g opacity={geom(active.prim) ? 1 : active.k}>
+            <g opacity={geom(active.prim) ? 1 : active.k} filter={geom(active.prim) ? 'url(#glow)' : undefined}>
               <Prims items={[partial(active.prim, active.k)]} hi={0} map={map} u={1.15} fs={12.5} dz={Math.min(s, 1.8)} />
             </g>
           )}</g>
@@ -253,6 +255,11 @@ export function Player({ sol, question }: { sol: Solution; question?: string }) 
               <text transform="rotate(-90) translate(29,2.8)" fontSize="8" fontWeight={800} fill="#fff" textAnchor="middle" fontFamily="Arial">{active ? pencilOf(active.prim) : ''}</text>
             </g>
           )}
+          {tip && <circle cx={tip[0]} cy={tip[1]} r={7 + Math.sin(t * 9) * 1.5} fill="url(#tipglow)" pointerEvents="none" />}
+          {si > 0 && t - tl.starts[si] < 1.3 && (() => {
+            const k = (t - tl.starts[si]) / 1.3, sc = 0.7 + Math.min(1, k * 4) * 0.3;
+            return <g transform={`translate(${W - 74},${44}) scale(${sc})`} opacity={k < 0.75 ? 1 : (1 - k) * 4} fontFamily="Arial"><rect x="-62" y="-14" width="124" height="28" rx="14" fill="#15803D" /><text y="5" fontSize="13" fontWeight={800} fill="#fff" textAnchor="middle">✓ Step {si} done</text></g>;
+          })()}
           {tip && compass && <circle cx={tip[0]} cy={tip[1]} r="3" fill="#C2410C" />}
         </svg></div>
         {fs && <div className="fsctrl">

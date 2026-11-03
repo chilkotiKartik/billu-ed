@@ -37,7 +37,7 @@ export default function Landing({ signedIn }: { signedIn: boolean }) {
         <div className="fadein">
           <span className="pill">🐾 For first-year B.Tech Engineering Drawing</span>
           <h1>Learn to draw <span className="acc">every sheet</span>, one clear step at a time.</h1>
-          <p className="lead">ED Cat shows each line being drawn, tells you its exact length and the pencil to use, and explains why. Points, lines, projections and more, from Sheet 1 to Sheet 3.</p>
+          <p className="lead">ED Cat shows each line being drawn, tells you its exact length and the pencil to use, and explains why. Points, lines, projections and more, from Sheet 1 to Sheet 4.</p>
           <div className="cta"><Link className="lbtn pri big" href={go.href}>{go.label}</Link>{!signedIn && <Link className="lbtn big" href="/sign-in">I have an account</Link>}</div>
           <div className="trust"><span>✅ Works on your phone</span><span>✅ Install like an app</span><span>✅ 18 questions covered</span></div>
         </div>
@@ -58,7 +58,7 @@ export default function Landing({ signedIn }: { signedIn: boolean }) {
 
       <section className="lsec" id="sheets">
         <h2 className="lh2">All your sheet questions are inside</h2>
-        <p className="lsub">Sheet 1 types of lines, Sheet 2 points and lines, Sheet 3 true lengths and inclinations.</p>
+        <p className="lsub">Sheet 1 types of lines, Sheet 2 points and lines, Sheet 3 true lengths and inclinations, Sheet 4 lines inclined to both planes.</p>
         <div className="chips">{qs.map((q, i) => <span key={i} className={q.s === 'Sheet 1' ? 's' : ''}>{q.s} · {q.code} {q.title}</span>)}</div>
         <div className="levels"><div><Cat size={70} level={1} /><br />Lv 1</div><div><Cat size={70} level={2} /><br />Lv 2 glasses</div><div><Cat size={70} level={3} /><br />Lv 3 cap</div><div><Cat size={70} level={4} /><br />Lv 4 scarf</div><div><Cat size={70} level={5} /><br />Lv 5 crown</div></div>
       </section>

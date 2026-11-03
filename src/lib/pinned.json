@@ -1,1 +1,94 @@
-{}
+{
+ "lines": [
+  {
+   "id": "UF-n20sC07A",
+   "title": "Lecture 2: Different types of lines used in Engineering Graphics",
+   "channel": ""
+  },
+  {
+   "id": "ksrO7CmuIOA",
+   "title": "Engineering graphics: types of lines, lettering, dimensioning",
+   "channel": ""
+  },
+  {
+   "id": "zYfQTF5KhC0",
+   "title": "Types of line used in Engineering Drawing",
+   "channel": ""
+  }
+ ],
+ "lettering": [
+  {
+   "id": "ksrO7CmuIOA",
+   "title": "Engineering graphics: types of lines, lettering, dimensioning",
+   "channel": ""
+  },
+  {
+   "id": "UF-n20sC07A",
+   "title": "Different types of lines used in Engineering Graphics",
+   "channel": ""
+  }
+ ],
+ "points": [
+  {
+   "id": "Lhw89l-usws",
+   "title": "Projection of points in Engineering Drawing",
+   "channel": ""
+  },
+  {
+   "id": "bwrkgeGm0QE",
+   "title": "Mech Dose #5: Projection of Points",
+   "channel": ""
+  },
+  {
+   "id": "sXpBqbeG8Uc",
+   "title": "Projection of points (Lecture 4)",
+   "channel": "Tikle's Academy"
+  }
+ ],
+ "special": [
+  {
+   "id": "rCcLJ3_4EXo",
+   "title": "Full video: Projection of points and lines",
+   "channel": "EzEd"
+  },
+  {
+   "id": "n6MU_rZctnM",
+   "title": "Line inclined to VP and parallel to HP",
+   "channel": ""
+  }
+ ],
+ "inclined": [
+  {
+   "id": "n6MU_rZctnM",
+   "title": "Line inclined to VP and parallel to HP",
+   "channel": ""
+  },
+  {
+   "id": "2rsp4-hbcms",
+   "title": "Projection of lines inclined to both HP and VP",
+   "channel": ""
+  },
+  {
+   "id": "vXb7Bw-5-YQ",
+   "title": "Line inclined to both HP and VP",
+   "channel": "Prof. Vinodkumar"
+  }
+ ],
+ "derived": [
+  {
+   "id": "2XbhosDfXso",
+   "title": "Projection of line inclined to both HP and VP",
+   "channel": ""
+  },
+  {
+   "id": "Pq8uTrFWV-w",
+   "title": "Line inclined to both HP and VP: Example 1",
+   "channel": ""
+  },
+  {
+   "id": "siQICzqMc84",
+   "title": "Line inclined to both HP and VP: Example 4",
+   "channel": ""
+  }
+ ]
+}

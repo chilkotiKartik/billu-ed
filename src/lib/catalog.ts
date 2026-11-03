@@ -5,6 +5,7 @@ import { letteringSolution } from './lettering';
 import { sheet1Solution } from './sheet1';
 import { pointsSolution, Q1_POINTS, q7Solution } from './points';
 import { q2, q3, q4, q5, q6 } from './derived';
+import { s4q1, s4q2, s4q3, s4q4 } from './sheet4';
 
 export interface Q { id: string; code: string; title: string; statement: string; topic: 'lines' | 'lettering' | 'points' | 'special' | 'inclined' | 'derived'; build: () => Solution; setup?: string; p?: { theta: number; phi: number; ha: number; da: number } }
 export interface Part { title: string; qs: Q[] }
@@ -51,6 +52,14 @@ export const SHEETS: Sheet[] = [
       { id: 's3-q6', code: 'Q6', title: 'Vertical AB and AC', topic: 'derived', statement: 'A vertical line AB, 75 mm long, has its end A in the HP and 25 mm in front of the VP. A line AC, 100 mm long, is in the HP and parallel to the VP. Draw the projections of the line BC and determine its inclination with the HP.', build: () => q6('s3-q6') },
     ] },
   ] },
+  { id: 's4', title: 'Sheet 4 · Lines inclined to both planes', parts: [
+    { title: 'Q1 to Q4 · Inclined to HP and VP', qs: [
+      { id: 's4-q1', code: 'Q1', title: 'A in HP and VP, 30° and 45°', topic: 'inclined', p: { theta: 30, phi: 45, ha: 0, da: 0 }, statement: 'A line AB, 75 mm long, has its end A in both the H.P. and the V.P. It is inclined at 30° to the H.P. and at 45° to the V.P. Draw its projections.', build: () => s4q1('s4-q1') },
+      { id: 's4-q2', code: 'Q2', title: 'Top view 65, front view 50', topic: 'derived', statement: "A top view of a 75 mm long line AB measures 65 mm, while the length of its front view is 50 mm. Its one end 'a' is in the H.P. and 12 mm in front of the V.P. Draw the projections of AB and determine its inclination with the H.P. and V.P.", build: () => s4q2('s4-q2') },
+      { id: 's4-q3', code: 'Q3', title: '45° to HP, top view 60° to VP', topic: 'derived', statement: "A line AB, 90 mm long, is inclined at 45° to the H.P. and its top view makes an angle of 60° with the V.P. The end 'a' is in the H.P. and 15 mm in front of the V.P. Draw its F.V. and find its true inclination with the V.P.", build: () => s4q3('s4-q3') },
+      { id: 's4-q4', code: 'Q4', title: 'Both ends given, find θ and φ', topic: 'derived', statement: "A line AB, 65 mm long, has its end 'a' 20 mm above the H.P. and 25 mm in front of the V.P. The end B is 40 mm above the H.P. and 65 mm in front of the V.P. Draw the projections of AB and show its inclination with the H.P. and V.P.", build: () => s4q4('s4-q4') },
+    ] },
+  ] },
 ];
 
 const PLANS: Record<string, string[]> = {
@@ -61,6 +70,10 @@ const PLANS: Record<string, string[]> = {
   's3-q4': ['In the VP means the front view is the TRUE length (75 mm) and the top view lies on XY.', 'Top view 55 mm is the horizontal gap. cos θ = 55/75, so θ = 42.83°.', 'The rise of b′ above a′ is √(75² − 55²) = 50.99 mm.'],
   's3-q5': ['Parallel to HP means the top view is the TRUE length at φ = 30°.', 'Front view = L cos 30° = 65, so L = 65/cos 30° = 75.06 mm.', 'b is below a by L sin 30° = 37.53 mm.'],
   's3-q6': ['AB is vertical, so its top view is a point: b falls on a.', 'AC is in the HP and parallel to VP: its front view is on XY and true length (100).', 'BC: tan θ = 75/100, so θ = 36.87° and BC = √(75² + 100²) = 125 mm. BC is parallel to VP, so b′c′ is the true length.'],
+  's4-q1': ['A is in both planes, so a′ and a are both ON XY.', 'Inclined to both: draw it first ∥ VP at 30° (true length in front view), then ∥ HP at 45° (true length in top view).', 'Swing the shortened views about a′ and a until they meet the loci of b′ and b.'],
+  's4-q2': ['Top view = L cos θ → cos θ = 65/75 → θ ≈ 29.93°.', 'Front view = L cos φ → cos φ = 50/75 → φ ≈ 48.19°.', 'a is IN the HP (a′ on XY) and 12 mm in front of VP (a is 12 below XY). Then draw it like any line inclined to both planes.'],
+  's4-q3': ['The 60° is the APPARENT angle β of the top view, not φ.', 'Top view length = 90 cos 45° = 63.64. Depth gain = 63.64 sin 60° = 55.11.', 'True φ: sin φ = 55.11/90 → φ ≈ 37.76°. Draw with θ = 45°, φ = 37.76°.'],
+  's4-q4': ['Height gap = 40 − 20 = 20 → sin θ = 20/65 → θ ≈ 17.92°.', 'Depth gap = 65 − 25 = 40 → sin φ = 40/65 → φ ≈ 37.98°.', 'a′ is 20 above XY, a is 25 below XY. b′ on the locus 40 above, b on the locus 65 below.'],
 };
 const TOPIC_PLAN: Record<string, string[]> = {
   lines: ['Draw the outline first with a thick, dark H line, then add everything else lighter.', 'Add hidden (dashed), centre (chain) and thin lines (dimension, extension, leader, hatching).', 'Finish with the cutting-plane line, the title block and the names in capital letters.'],
