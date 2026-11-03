@@ -1,9 +1,11 @@
 import Link from 'next/link';
+import { SiteFooter } from '@/components/SiteFooter';
 
 export const metadata = { title: 'Terms · ED Cat' };
 
 export default function Terms() {
   return (
+    <>
     <main className="legal">
       <Link href="/">← Home</Link>
       <h1>Terms of use</h1>
@@ -16,5 +18,7 @@ export default function Terms() {
       <h2>No warranty</h2>
       <p>We work hard to keep the drawings correct, but the app is provided as is. Report anything that looks wrong with the in-app button.</p>
     </main>
+    <SiteFooter />
+    </>
   );
 }

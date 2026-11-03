@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { Cat } from './Cat';
 import HeroDemo from './HeroDemo';
 import { SHEETS, ALL } from '@/lib/catalog';
+import { LEVELS } from '@/lib/game';
+import { SiteFooter } from './SiteFooter';
 
 const FEATURES = [
   ['📸', 'Scan, type or pick', 'Photograph a question or type it. The app reads the numbers and asks you to confirm them. No guessing.'],
@@ -13,11 +15,20 @@ const FEATURES = [
   ['📄', 'A1 and A3 sheets', 'All your questions placed on a neat sheet with title block, ready to download as a PDF.'],
   ['🏆', 'XP, levels, badges', 'Earn XP as you finish questions. Your cat gets glasses, a cap, a scarf and a crown.'],
 ];
+// one colour and icon per sheet, for the sheet cards
+const SHEET_LOOK: Record<string, { ic: string; c: string; blurb: string }> = {
+  s1: { ic: '📏', c: '#F4A340', blurb: 'Every BIS line type on one figure, plus single-stroke lettering.' },
+  s2: { ic: '📍', c: '#0B7A75', blurb: 'Points in all four quadrants, then lines parallel and perpendicular to HP and VP.' },
+  s3: { ic: '📐', c: '#C2410C', blurb: 'Lines inclined to one plane: true length, angles and the missing views.' },
+  s4: { ic: '🧭', c: '#5B5BD6', blurb: 'Lines inclined to both HP and VP with the two-position method.' },
+};
+const XP_AT = [0, 40, 160, 360, 640];
+
 const STEPS = [
   ['Sign up free', 'Create your account in seconds with your email.'],
   ['Pick your question', 'Scan it, type it, or choose from the sheet list.'],
   ['Watch and learn', 'Follow the animated lesson at your own speed, with the cat explaining.'],
-  ['Draw and download', 'Copy it on your sheet at 1:1, or download the finished sheet PDF.'],
+  ['Draw and download', 'Copy it onto your sheet at the scale shown, or download the finished sheet as a PDF.'],
 ];
 
 export default function Landing({ signedIn }: { signedIn: boolean }) {
@@ -58,9 +69,39 @@ export default function Landing({ signedIn }: { signedIn: boolean }) {
 
       <section className="lsec" id="sheets">
         <h2 className="lh2">All your sheet questions are inside</h2>
-        <p className="lsub">Sheet 1 types of lines, Sheet 2 points and lines, Sheet 3 true lengths and inclinations, Sheet 4 lines inclined to both planes.</p>
-        <div className="chips">{qs.map((q, i) => <span key={i} className={q.s === 'Sheet 1' ? 's' : ''}>{q.s} · {q.code} {q.title}</span>)}</div>
-        <div className="levels"><div><Cat size={70} level={1} /><br />Lv 1</div><div><Cat size={70} level={2} /><br />Lv 2 glasses</div><div><Cat size={70} level={3} /><br />Lv 3 cap</div><div><Cat size={70} level={4} /><br />Lv 4 scarf</div><div><Cat size={70} level={5} /><br />Lv 5 crown</div></div>
+        <p className="lsub">{ALL.length} questions from Sheet 1 to Sheet 4, each with a live lesson, steps, practice and a finished sheet.</p>
+        <div className="sgrid">
+          {SHEETS.map((sh) => {
+            const look = SHEET_LOOK[sh.id] ?? { ic: '📄', c: '#1B2340', blurb: '' };
+            const qs = sh.parts.flatMap((p) => p.qs);
+            const [num, name] = sh.title.split(' · ');
+            return (
+              <article className="scard" key={sh.id} style={{ ['--sc' as string]: look.c }}>
+                <div className="shead"><span className="sic" aria-hidden="true">{look.ic}</span><div><small>{num} · {qs.length} {qs.length === 1 ? 'question' : 'questions'}</small><h3>{name.charAt(0).toUpperCase() + name.slice(1)}</h3></div></div>
+                <p className="sblurb">{look.blurb}</p>
+                <ul className="sqs">
+                  {qs.slice(0, 4).map((q) => <li key={q.id}><b>{q.code}</b><span>{q.title}</span></li>)}
+                  {qs.length > 4 && <li className="more">+ {qs.length - 4} more</li>}
+                </ul>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="lsec lvsec">
+        <h2 className="lh2">Level up your cat</h2>
+        <p className="lsub">Finish questions, ace the quiz and keep your streak to earn XP. Your cat dresses up as you grow.</p>
+        <ol className="lvtrack">
+          {[1, 2, 3, 4, 5].map((l) => (
+            <li key={l}>
+              <div className="lvcat"><Cat size={78} level={l} mood={l === 5 ? 'happy' : 'idle'} /></div>
+              <b>Lv {l} · {LEVELS[l - 1]}</b>
+              <span>{['Your first paw print', '+ smart glasses', '+ graduation cap', '+ cosy scarf', '+ golden crown'][l - 1]}</span>
+              <em>{XP_AT[l - 1]} XP</em>
+            </li>
+          ))}
+        </ol>
       </section>
 
       <section className="lsec cband">
@@ -69,7 +110,7 @@ export default function Landing({ signedIn }: { signedIn: boolean }) {
         <p>Free for students. Takes less than a minute to start.</p>
         <Link className="lbtn pri big" href={go.href}>{go.label}</Link>
       </section>
-      <footer className="foot">ED Cat · Made with 🐾 for Engineering Drawing students · Drawings follow first-angle projection and BIS conventions · <Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link></footer>
+      <SiteFooter />
     </div>
   );
 }

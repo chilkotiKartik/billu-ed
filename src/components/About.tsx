@@ -28,6 +28,7 @@ export function About() {
         <p className="mono small">{`line('s3-C4', 'C4', 'Title', 'Question text', 30, 45, 15, 20, 'inclined')`}</p>
         <p className="small">Arguments: id, code, title, statement, θ (to HP), φ (to VP), end A above HP, end A in front of VP, topic. Put it in the right part of SHEETS in catalog.ts and it appears in the menu, the animation and the A3 sheet.</p>
       </div>
+      <div className="card info aboutcredit"><h3>👋 Made by</h3><p><b>Kartik Chilkoti</b> designed and built ED Cat for Engineering Drawing students. © 2026 · <a href="/copyright">Copyright &amp; credits</a></p></div>
       <h3>How each question was set up</h3>
       {SHEETS.flatMap((s) => s.parts.flatMap((p) => p.qs)).map((q) => (
         <div key={q.id} className="card setup"><b>{q.code} · {q.title}</b><p>{q.setup}</p></div>
