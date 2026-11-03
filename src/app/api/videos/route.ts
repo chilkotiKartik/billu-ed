@@ -10,7 +10,7 @@ const TTL = 7 * 24 * 3600 * 1000;
 const secs = (iso: string) => { const m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso) || []; return (+(m[1] || 0)) * 3600 + (+(m[2] || 0)) * 60 + +(m[3] || 0); };
 
 export async function GET(req: Request) {
-  const g = await guard('videos', 30);
+  const g = await guard('videos', 30, { publicIp: true, req });
   if (!isCtx(g)) return g;
   const q = (new URL(req.url).searchParams.get('q') || '').trim().slice(0, 160);
   if (!q) return NextResponse.json({ error: 'Missing q' }, { status: 400 });

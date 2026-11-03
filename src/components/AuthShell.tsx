@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Cat } from './Cat';
+import { ALL } from '@/lib/catalog';
 
 export function AuthShell({ mode, children }: { mode: 'in' | 'up'; children: React.ReactNode }) {
   return (
@@ -10,7 +11,7 @@ export function AuthShell({ mode, children }: { mode: 'in' | 'up'; children: Rea
         <h2>{mode === 'up' ? 'Join the class cat 🐾' : 'Welcome back!'}</h2>
         <ul>
           <li>✏️ Live pencil, ruler and compass lessons</li>
-          <li>📐 All 18 sheet questions, solved step by step</li>
+          <li>📐 All {ALL.length} sheet questions, solved step by step</li>
           <li>🏆 XP, levels and badges as you learn</li>
           <li>📄 Download your finished sheet as a PDF</li>
         </ul>

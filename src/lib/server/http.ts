@@ -8,12 +8,19 @@ export const ok = <T extends object>(body: T = {} as T) => NextResponse.json({ o
 
 type Ctx = { userId: string };
 
-/** Auth + rate limit in one place. `name` and `limit` (per minute) keep each route's budget separate. */
-export async function guard(name: string, limit: number): Promise<Ctx | NextResponse> {
+/**
+ * Auth + rate limit in one place. `name` and `limit` (per minute) keep each route's budget separate.
+ * With `publicIp: true` signed-out visitors are allowed too and are limited by IP instead.
+ */
+export async function guard(name: string, limit: number, opts: { publicIp?: boolean; req?: Request } = {}): Promise<Ctx | NextResponse> {
   const { userId } = await auth();
-  if (!userId) return fail('Please sign in.', 401);
-  if (!(await allow(`${name}:${userId}`, limit))) return fail('Too many requests, try again in a minute.', 429);
-  return { userId };
+  let who = userId;
+  if (!who) {
+    if (!opts.publicIp) return fail('Please sign in.', 401);
+    who = `ip:${(opts.req?.headers.get('x-forwarded-for') || 'anon').split(',')[0].trim()}`;
+  }
+  if (!(await allow(`${name}:${who}`, limit))) return fail('Too many requests, try again in a minute.', 429);
+  return { userId: who };
 }
 export const isCtx = (x: Ctx | NextResponse): x is Ctx => !(x instanceof NextResponse);
 
