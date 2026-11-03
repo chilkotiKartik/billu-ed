@@ -4,12 +4,14 @@ import SW from '@/components/SW';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
+import { SITE_URL } from '@/lib/site';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: 'ED Cat',
   description: 'Step-by-step help for Engineering Drawing sheets',
   applicationName: 'ED Cat',
-  openGraph: { title: 'ED Cat', description: 'Step-by-step help for Engineering Drawing sheets', type: 'website' },
+  openGraph: { title: 'ED Cat', description: 'Step-by-step help for Engineering Drawing sheets', type: 'website', url: '/', siteName: 'ED Cat', images: [{ url: '/icon-512.png', width: 512, height: 512 }] },
   manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, title: 'ED Cat', statusBarStyle: 'default' },
   icons: { icon: '/icon-192.png', apple: '/icon-192.png' },

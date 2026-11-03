@@ -33,7 +33,7 @@ CI (`.github/workflows/ci.yml`) runs typecheck, tests, `npm audit` and a build o
 1. Push to GitHub, then **Add New Project** on Vercel and import the repo.
 2. Add the environment variables from `.env.example` (Project Settings, Environment Variables).
 3. In **Clerk**: switch the app to Production, add your Vercel domain, and use the production keys.
-4. Deploy. Check `https://<your-domain>/api/health`; it shows which optional features are switched on (no secrets).
+4. Deploy. Live at **https://www.edrawing.me** (edrawing.me redirects there). Check `https://www.edrawing.me/api/health`; it shows which optional features are switched on (no secrets).
 
 ### Account storage (Supabase)
 
