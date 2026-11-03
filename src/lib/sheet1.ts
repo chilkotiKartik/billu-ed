@@ -35,20 +35,32 @@ const cutting: Prim[] = [
 ];
 
 /**
- * Border and title block of a real A3 sheet (420 x 297, landscape): 20 mm filing margin on the left,
- * 10 mm on the other sides, so the border is 390 x 277. Title block 160 x 32 at the bottom right.
- * The figure sits in the middle of the free space, drawn full size (1:1).
+ * Border and title block of the real sheet: A2 (594 x 420, landscape), 20 mm filing margin on the left and
+ * 10 mm on the other sides (border 564 x 400). The figure is drawn at 2 : 1 so it fills the sheet, so one
+ * drawing unit here = 2 mm of paper (K = 0.5 units per paper mm). Title block 200 x 70 at the bottom right,
+ * laid out like the class sheet: TITLE across the top, then NAME ... REMARK, with "ALL DIMENSIONS ARE IN MM",
+ * the scale and the first-angle projection symbol on the right.
  */
-const L = -145, R = 245, B = -167.5, T = B + 277;
-const TB = R - 160, TM = TB + 80, row = (i: number) => B + 8 * i;
+const K = 0.5;
+const L = -80, R = L + 564 * K, B = -122, T = B + 400 * K;
+const TB = R - 200 * K, TS = TB + 130 * K, rowH = 10 * K, row = (i: number) => B + rowH * i;
+const mm = (v: number) => v * K;
+const LEFT_ROWS = ['REMARK:', 'DATE:', 'SHEET NO: 01', 'SECTION:', 'BRANCH:', 'NAME:']; // bottom to top
+const cone: Prim[] = [ // first-angle symbol: frustum (left) and its end view as two circles (right)
+  ln(TS + mm(8), row(0.4), TS + mm(8), row(1.6), 'fine'), ln(TS + mm(24), row(0.65), TS + mm(24), row(1.35), 'fine'),
+  ln(TS + mm(8), row(1.6), TS + mm(24), row(1.35), 'fine'), ln(TS + mm(8), row(0.4), TS + mm(24), row(0.65), 'fine'),
+  circle(TS + mm(48), row(1), mm(6), 'fine'), circle(TS + mm(48), row(1), mm(3.5), 'fine'),
+];
 const frame: Prim[] = [
   ln(L, B, R, B), ln(R, B, R, T), ln(R, T, L, T), ln(L, T, L, B),
-  ln(TB, row(4), R, row(4), 'fine'), ln(TB, row(3), R, row(3), 'fine'), ln(TB, row(2), R, row(2), 'fine'), ln(TB, row(1), R, row(1), 'fine'),
-  ln(TB, B, TB, row(4), 'fine'), ln(TM, B, TM, row(3), 'fine'),
-  textMM(TB + 3, row(3) + 1.5, 'TITLE: LINES AND DIMENSIONING', 5),
-  textMM(TB + 3, row(2) + 2.2, 'NAME:', 3.5), textMM(TM + 3, row(2) + 2.2, 'BRANCH:', 3.5),
-  textMM(TB + 3, row(1) + 2.2, 'SECTION:', 3.5), textMM(TM + 3, row(1) + 2.2, 'SHEET NO: 01', 3.5),
-  textMM(TB + 3, row(0) + 2.2, 'DATE:', 3.5), textMM(TM + 3, row(0) + 2.2, 'SCALE: 1:1', 3.5),
+  ln(TB, row(7), R, row(7)), ln(TB, B, TB, row(7)),
+  ...[1, 2, 3, 4, 5, 6].map((i) => ln(TB, row(i), TS, row(i), 'fine')),
+  ln(TS, B, TS, row(6), 'fine'), ln(TS, row(2), R, row(2), 'fine'), ln(TS, row(3), R, row(3), 'fine'), ln(TS, row(4), R, row(4), 'fine'),
+  textMM(TB + mm(3), row(6) + mm(2), 'TITLE: LINES AND DIMENSIONING', mm(7)),
+  ...LEFT_ROWS.map((t, i) => textMM(TB + mm(3), row(i) + mm(2.5), t, mm(5))),
+  textMM(TS + mm(3), row(5) + mm(1.5), 'ALL DIMENSIONS', mm(4.5)), textMM(TS + mm(3), row(4) + mm(3), 'ARE IN MM', mm(4.5)),
+  textMM(TS + mm(3), row(3) + mm(2.5), 'SCALE: 2 : 1', mm(4.5)), textMM(TS + mm(3), row(2) + mm(2.5), 'FIRST ANGLE', mm(4.5)),
+  ...cone,
 ];
 
 /** A permanent name label: capital letters with a thin arrow to the line it names. */
@@ -67,8 +79,8 @@ const names: Prim[] = [
 export function sheet1Solution(id = 's1'): Solution {
   const steps: Step[] = [
     S('Border and title block', 'H pencil + scale',
-      'Keep the A3 sheet landscape (420 × 297). Draw the border with THICK lines: 20 mm from the left edge (space for filing) and 10 mm from the other three edges. Then draw the title block 160 × 32 at the bottom right and write the title, name, branch, section, sheet number, date and scale in capital letters (5 mm for the title, 3.5 mm for the rest).',
-      frame, 'border 390 × 277 · margins 20 left, 10 others · title block 160 × 32'),
+      'Keep the A2 sheet landscape (594 × 420). Draw the border with THICK lines: 20 mm from the left edge (space for filing) and 10 mm from the other three edges. Draw the title block 200 × 70 at the bottom right: TITLE across the top, then NAME, BRANCH, SECTION, SHEET NO, DATE and REMARK, and on the right ALL DIMENSIONS ARE IN MM, the scale and the first-angle symbol. Capital letters: 7 mm for the title, 5 mm for the rest. The figure is drawn at 2 : 1 (twice full size) so it fills the sheet, but the dimensions still show the true size.',
+      frame, 'border 564 × 400 · margins 20 left, 10 others · title block 200 × 70 · scale 2 : 1'),
     S('Line A: outline of the front view', 'H pencil, sharp',
       'Draw the visible edges with a continuous THICK line: the base plate 90 mm long and 10 mm thick, the lug 50 mm wide with a semicircular top of radius 25, and the hole Ø20 at the centre of the arc, 30 mm above the base.',
       [...fvOutline, ...callout('A · outline', -38, 24, -0.8, 18)], 'base 90 × 10 · lug 50 wide · R25 · hole Ø20'),

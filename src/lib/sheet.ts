@@ -4,7 +4,7 @@ import { bbox } from './geom';
 /** Centres the drawing on an A3 landscape sheet (420 x 297 mm), reducing the scale only if it would not fit. */
 export function sheetLayout(sol: Solution) {
   const bb = bbox(sol.final);
-  const options: [number, string][] = [[1, '1:1'], [0.5, '1:2'], [0.25, '1:4'], [0.2, '1:5']];
+  const options: [number, string][] = [[2, '2:1'], [1, '1:1'], [0.5, '1:2'], [0.25, '1:4'], [0.2, '1:5']];
   let s = 1, label = '1:1';
   for (const [k, l] of options) {
     s = k; label = l;
