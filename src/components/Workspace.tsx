@@ -11,7 +11,7 @@ import { FullSheetSvg } from './FullSheet';
 import { pages } from '@/lib/fullsheet';
 import { Challenge } from './Challenge';
 import { Quiz } from './Quiz';
-import { EMPTY, BADGES, LEVELS, levelOf, progress, load as loadGame, save as saveGame, type Game } from '@/lib/game';
+import { EMPTY, BADGES, LEVELS, levelOf, progress, save as saveGame, type Game } from '@/lib/game';
 import { sfx, isMuted, setMuted } from '@/lib/sfx';
 import { added, catLine } from '@/lib/explain';
 import { parseQuestion } from '@/lib/parser';
@@ -24,7 +24,9 @@ import { readImage, imageToDataUrl } from '@/lib/ocr';
 import { askAI, missingOf } from '@/lib/ai';
 import { sheetToPdf } from '@/lib/pdf';
 import { pencilsOf, colOf } from '@/lib/pencil';
-import { listSheets, saveSheet, type Saved } from '@/lib/store';
+import { listSheets, saveSheet, deleteSheet, renameSheet, type Saved } from '@/lib/store';
+import { loadLocal, saveLocal, pullProgress, pushProgress, loadProfileLocal, saveProfileLocal, pullProfile, pushProfile, sendFeedback } from '@/lib/sync';
+import { sameProgress } from '@/lib/progress';
 import type { LineInput, Solution } from '@/lib/types';
 
 type Screen = 'scan' | 'trophies' | 'full' | 'about' | 'sheets' | 'confirm' | 'steps' | 'sheet' | 'mistakes' | 'saved';
@@ -38,7 +40,7 @@ function Logo({ level }: { level: number }) {
   return <Cat mood="idle" size={40} level={level} />;
 }
 
-function SheetSvg({ sol, svgRef }: { sol: Solution; svgRef: React.RefObject<SVGSVGElement> }) {
+function SheetSvg({ sol, svgRef }: { sol: Solution; svgRef: React.RefObject<SVGSVGElement | null> }) {
   const lay = sheetLayout(sol);
   const map = (x: number, y: number): [number, number] => [lay.ox + x * lay.s, lay.oy - y * lay.s];
   return (
@@ -79,7 +81,7 @@ export default function Workspace() {
   const [toast, setToast] = useState<{ t: string; k: number } | null>(null);
   const [qtext, setQtext] = useState<string | null>(null);
   const [mute, setMute] = useState(false);
-  useEffect(() => { setGame(loadGame()); setMute(isMuted()); }, []);
+  useEffect(() => { setMute(isMuted()); }, []);
   function award(xp: number, why: string, kind?: 'tap' | 'quiz' | 'variant') {
     setGame((g) => {
       const n = { ...g, xp: g.xp + xp, tapOk: g.tapOk + (kind === 'tap' ? 1 : 0), quizOk: g.quizOk + (kind === 'quiz' ? 1 : 0), variants: g.variants + (kind === 'variant' ? 1 : 0) };
@@ -99,20 +101,62 @@ export default function Workspace() {
   const allPages = useMemo(() => pages(), []);
   const [done, setDone] = useState<string[]>([]);
   const [vid, setVid] = useState(false);
+  const [fb, setFb] = useState(false);
+  const [fbKind, setFbKind] = useState<'wrong-step' | 'unclear' | 'idea' | 'bug'>('wrong-step');
+  const [fbMsg, setFbMsg] = useState('');
+  const [fbState, setFbState] = useState<'idle' | 'sending' | 'sent' | 'off' | 'error'>('idle');
   const [matched, setMatched] = useState('');
   const touch = useRef<number | null>(null);
 
+  // Progress: device copy first (instant), then merge with the account copy so a new phone picks up where the student left off.
+  const [sync, setSync] = useState<'local' | 'saving' | 'synced' | 'offline'>('local');
+  const ready = useRef(false);
   useEffect(() => {
-    try { setDone(JSON.parse(localStorage.getItem('edbuddy.done') || '[]')); } catch { /* ignore */ }
+    let dead = false;
+    const local = loadLocal();
+    setDone(local.done);
+    setGame(local.game);
+    const prof = loadProfileLocal();
+    setPname(prof.name);
+    setProll(prof.roll);
+    (async () => {
+      const merged = await pullProgress(local);
+      if (dead) return;
+      if (merged) {
+        setDone(merged.done);
+        setGame(merged.game);
+        saveLocal(merged);
+        if (!sameProgress(merged, local)) setToast({ t: 'Your progress is synced ☁️', k: Date.now() });
+        setSync((await pushProgress(merged)) ? 'synced' : 'offline');
+      } else {
+        setSync('offline');
+      }
+      const rp = await pullProfile();
+      if (!dead && rp && (rp.name || rp.roll)) { setPname(rp.name); setProll(rp.roll); saveProfileLocal(rp); }
+      ready.current = true;
+    })();
+    return () => { dead = true; };
   }, []);
 
+  // Save to the account 1.5 s after the last change (and always keep the device copy).
+  useEffect(() => {
+    if (!ready.current) return;
+    saveLocal({ done, game });
+    setSync('saving');
+    const t = setTimeout(async () => setSync((await pushProgress({ done, game })) ? 'synced' : 'offline'), 1500);
+    return () => clearTimeout(t);
+  }, [done, game]);
+
+  useEffect(() => {
+    if (!ready.current) return;
+    const p = { name: pname, roll: proll };
+    saveProfileLocal(p);
+    const t = setTimeout(() => { void pushProfile(p); }, 1500);
+    return () => clearTimeout(t);
+  }, [pname, proll]);
+
   function markDone(id: string) {
-    setDone((d) => {
-      if (d.includes(id)) return d;
-      const n = [...d, id];
-      try { localStorage.setItem('edbuddy.done', JSON.stringify(n)); } catch { /* ignore */ }
-      return n;
-    });
+    setDone((d) => (d.includes(id) ? d : [...d, id]));
   }
 
   function finish() {
@@ -217,7 +261,7 @@ export default function Workspace() {
     if (!sol) return;
     if (!sol.lineInput) return;
     const where = await saveSheet(sol.title, sol.lineInput);
-    setMsg(where === 'cloud' ? 'Saved to your account.' : 'Saved on this phone.');
+    setMsg(where === 'cloud' ? 'Saved to your account.' : where === 'full' ? 'Your account is full (100 sheets). Delete an old one in My sheets.' : 'Saved on this phone.');
   }
 
   async function download() {
@@ -259,7 +303,7 @@ export default function Workspace() {
       {toast && <div key={toast.k} className="toast" onAnimationEnd={() => setToast(null)}>{toast.t}</div>}
       <header className="top">
         <div className="brand"><button className="hamb" aria-label="Open menu" onClick={() => setMenu(true)}><span /><span /><span /></button><Logo level={level} /><span>ED Cat</span></div>
-        <div className="hright"><button className="xp" onClick={() => setScreen('trophies')} aria-label="Level and trophies">Lv {level} · {game.xp} XP</button><button className="mute" aria-label={mute ? 'Unmute sounds' : 'Mute sounds'} onClick={() => { setMuted(!mute); setMute(!mute); }}>{mute ? '🔇' : '🔊'}</button><UserButton afterSignOutUrl="/" /></div>
+        <div className="hright"><button className="xp" onClick={() => setScreen('trophies')} aria-label="Level and trophies">Lv {level} · {game.xp} XP</button><button className="mute" aria-label={mute ? 'Unmute sounds' : 'Mute sounds'} onClick={() => { setMuted(!mute); setMute(!mute); }}>{mute ? '🔇' : '🔊'}</button><span className={`sync ${sync}`} role="status" title={sync === 'synced' ? 'Progress saved to your account' : sync === 'saving' ? 'Saving…' : sync === 'offline' ? 'Saved on this phone only (account storage unavailable)' : 'Loading…'}>{sync === 'synced' ? '☁️' : sync === 'saving' ? '⏳' : sync === 'offline' ? '📱' : '·'}</span><UserButton /></div>
       </header>
 
       <main className="body">
@@ -397,6 +441,7 @@ export default function Workspace() {
               <button role="tab" aria-selected={tab === 'steps'} className={tab === 'steps' ? 'on' : ''} onClick={() => setTab('steps')}>📋 Steps</button>
             </div>
             {matched && <div className="note">{matched}</div>}
+            <button className="reportbtn" onClick={() => { setFbMsg(''); setFbKind('wrong-step'); setFbState('idle'); setFb(true); }}>🚩 Spotted a mistake or something unclear in this step?</button>
             {tab === 'lesson' && (
               <>
                 {curQ?.topic === 'lettering'
@@ -485,14 +530,50 @@ export default function Workspace() {
             {saved.length === 0 && <div className="note">Nothing saved yet. Solve a question and tap Save on the final sheet.</div>}
             <div className="list">
               {saved.map((s) => (
-                <button key={s.id} className="item" onClick={() => { const i = s.input; loadText(`A line ${i.n1}${i.n2}, ${i.L} mm long, ${i.theta === 0 ? 'is parallel to the HP' : `is inclined at ${i.theta}° to the HP`} ${i.phi === 0 ? 'and parallel to the VP' : `and inclined at ${i.phi}° to the VP`}. End ${i.n1} is ${i.ha ? `${i.ha} mm above the HP` : 'in the HP'} and ${i.da ? `${i.da} mm in front of the VP` : 'in the VP'}.`); }}>
-                  {s.title}<span>{new Date(s.created_at).toLocaleDateString()}</span>
-                </button>
+                <div key={s.id} className="item row">
+                  <button className="open" onClick={() => { const i = s.input; loadText(`A line ${i.n1 ?? 'A'}${i.n2 ?? 'B'}, ${i.L} mm long, ${i.theta === 0 ? 'is parallel to the HP' : `is inclined at ${i.theta}° to the HP`} ${i.phi === 0 ? 'and parallel to the VP' : `and inclined at ${i.phi}° to the VP`}. End ${i.n1 ?? 'A'} is ${i.ha ? `${i.ha} mm above the HP` : 'in the HP'} and ${i.da ? `${i.da} mm in front of the VP` : 'in the VP'}.`); }}>
+                    {s.title}<span>{new Date(s.created_at).toLocaleDateString()}</span>
+                  </button>
+                  <button className="mini" aria-label={`Rename ${s.title}`} onClick={async () => { const t = window.prompt('New name for this sheet', s.title)?.trim(); if (t && t !== s.title) { if (await renameSheet(s.id, t.slice(0, 120))) setSaved((a) => a.map((x) => (x.id === s.id ? { ...x, title: t.slice(0, 120) } : x))); else setMsg('Could not rename right now.'); } }}>✏️</button>
+                  <button className="mini" aria-label={`Delete ${s.title}`} onClick={async () => { if (window.confirm(`Delete “${s.title}”?`)) { if (await deleteSheet(s.id)) setSaved((a) => a.filter((x) => x.id !== s.id)); else setMsg('Could not delete right now.'); } }}>🗑️</button>
+                </div>
               ))}
             </div>
           </>
         )}
       </main>
+
+      {fb && (
+        <div className="modal" onClick={() => setFb(false)}>
+          <form className="sheetm" role="dialog" aria-modal="true" aria-label="Report a problem" onClick={(e) => e.stopPropagation()} onSubmit={async (e) => {
+            e.preventDefault();
+            setFbState('sending');
+            const r = await sendFeedback({ kind: fbKind, message: fbMsg, questionId: qid || undefined, step });
+            setFbState(r === 'sent' ? 'sent' : r === 'off' ? 'off' : 'error');
+          }}>
+            <h3>Tell us what looks wrong</h3>
+            {fbState === 'sent' ? <div className="note">Thank you! Your lecturer team will check it. 🐾</div> : (
+              <>
+                <label className="field"><span>What kind of problem?</span>
+                  <select value={fbKind} onChange={(e) => setFbKind(e.target.value as typeof fbKind)}>
+                    <option value="wrong-step">This step looks wrong</option>
+                    <option value="unclear">I do not understand this</option>
+                    <option value="bug">The app is broken</option>
+                    <option value="idea">I have an idea</option>
+                  </select>
+                </label>
+                <label className="field"><span>Tell us more (step {step + 1}{qid ? `, ${qid}` : ''})</span>
+                  <textarea rows={4} maxLength={1000} required minLength={3} value={fbMsg} onChange={(e) => setFbMsg(e.target.value)} />
+                </label>
+                {fbState === 'off' && <div className="note">Feedback is not switched on for this app yet.</div>}
+                {fbState === 'error' && <div className="note">Could not send. Please try again in a minute.</div>}
+                <button className="btn full" type="submit" disabled={fbState === 'sending' || fbMsg.trim().length < 3}>{fbState === 'sending' ? 'Sending…' : 'Send'}</button>
+              </>
+            )}
+            <button type="button" className="btn ghost full" onClick={() => setFb(false)}>Close</button>
+          </form>
+        </div>
+      )}
 
       {vid && (
         <div className="modal" onClick={() => setVid(false)}>

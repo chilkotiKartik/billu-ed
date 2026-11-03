@@ -4,7 +4,7 @@ import { layoutPage, PAPER, type Page, type Paper } from '@/lib/fullsheet';
 const INK = '#1B2340';
 
 /** A real-looking A3 sheet: margins, every question labelled and drawn to one scale, and a title block. */
-export function FullSheetSvg({ page, svgRef, name = '', roll = '', paper = 'A3' }: { paper?: Paper; page: Page; svgRef?: React.RefObject<SVGSVGElement>; name?: string; roll?: string }) {
+export function FullSheetSvg({ page, svgRef, name = '', roll = '', paper = 'A3' }: { paper?: Paper; page: Page; svgRef?: React.RefObject<SVGSVGElement | null>; name?: string; roll?: string }) {
   const { placed, scale } = layoutPage(page, paper);
   const [W, H] = PAPER[paper], k = paper === 'A1' ? 1.6 : 1;
   const sc = scale === 1 ? '1 : 1' : `1 : ${+(1 / scale).toFixed(2)}`;

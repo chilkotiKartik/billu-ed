@@ -1,3 +1,4 @@
+import { ALL } from './catalog';
 export interface Game { xp: number; streak: number; last: string; tapOk: number; quizOk: number; variants: number }
 const KEY = 'edcat.game';
 export const EMPTY: Game = { xp: 0, streak: 0, last: '', tapOk: 0, quizOk: 0, variants: 0 };
@@ -36,6 +37,6 @@ export const BADGES: Badge[] = [
   { id: 'quiz', icon: '🎓', name: 'Quiz Whiz', desc: 'Answer 10 cat quiz questions right', test: (g) => g.quizOk >= 10 },
   { id: 'fire', icon: '🔥', name: 'On fire', desc: 'Study 3 days in a row', test: (g) => g.streak >= 3 },
   { id: 'dice', icon: '🎲', name: 'New numbers', desc: 'Finish 3 questions with new numbers', test: (g) => g.variants >= 3 },
-  { id: 'all', icon: '👑', name: 'Completionist', desc: 'Finish every question', test: (_, d) => d.length >= 18 },
+  { id: 'all', icon: '👑', name: 'Completionist', desc: 'Finish every question', test: (_, d) => d.length >= ALL.length },
 ];
 export const _all = all;

@@ -6,12 +6,14 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'ED Cat',
   description: 'Step-by-step help for Engineering Drawing sheets',
+  applicationName: 'ED Cat',
+  openGraph: { title: 'ED Cat', description: 'Step-by-step help for Engineering Drawing sheets', type: 'website' },
   manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, title: 'ED Cat', statusBarStyle: 'default' },
   icons: { icon: '/icon-192.png', apple: '/icon-192.png' },
 };
 
-export const viewport: Viewport = { themeColor: '#1B2340', width: 'device-width', initialScale: 1, maximumScale: 1 };
+export const viewport: Viewport = { themeColor: '#1B2340', width: 'device-width', initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

@@ -1,28 +1,23 @@
-import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
+import { guard, isCtx } from '@/lib/server/http';
 
 export interface YtItem { id: string; title: string; channel: string; thumb: string; secs: number; views: number }
 
 // One YouTube search costs 100 of the 10,000 free daily quota units, so every answer is kept for 7 days.
 const cache = new Map<string, { t: number; items: YtItem[] }>();
-const hits = new Map<string, number[]>();
 const TTL = 7 * 24 * 3600 * 1000;
 
 const secs = (iso: string) => { const m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso) || []; return (+(m[1] || 0)) * 3600 + (+(m[2] || 0)) * 60 + +(m[3] || 0); };
 
 export async function GET(req: Request) {
-  // signed-out visitors may search too; they are rate limited by IP
-  const { userId: uid } = auth();
-  const userId = uid || `ip:${(req.headers.get('x-forwarded-for') || 'anon').split(',')[0].trim()}`;
+  const g = await guard('videos', 30, { publicIp: true, req });
+  if (!isCtx(g)) return g;
   const q = (new URL(req.url).searchParams.get('q') || '').trim().slice(0, 160);
   if (!q) return NextResponse.json({ error: 'Missing q' }, { status: 400 });
   const key = process.env.YOUTUBE_API_KEY;
   if (!key) return NextResponse.json({ items: [], reason: 'no-key' });
 
   const now = Date.now();
-  const recent = (hits.get(userId) || []).filter((t) => now - t < 60_000);
-  if (recent.length >= 30) return NextResponse.json({ error: 'Too many requests, try again in a minute.' }, { status: 429 });
-  hits.set(userId, [...recent, now]);
 
   const ck = q.toLowerCase();
   const c = cache.get(ck);

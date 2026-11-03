@@ -1,3 +1,7 @@
+import { mergeProgress } from '../src/lib/progress';
+import { lineInput, progressSchema, feedbackSchema, profileSchema } from '../src/lib/schemas';
+import { allow } from '../src/lib/server/ratelimit';
+import { db, dbEnabled } from '../src/lib/server/db';
 import { solve, kindOf } from '../src/lib/solver';
 import { parseQuestion } from '../src/lib/parser';
 import { PRESETS, randomQuestion } from '../src/lib/presets';
@@ -105,5 +109,55 @@ for (const q of ALL) {
   if (q.p) for (let i = 0; i < 20; i++) { const v = variantOf(q); ok(!!v && v.sol.steps.length >= 4 && v.statement.length > 20, `variant ${q.id}`); }
 }
 
-console.log(fails ? `${fails} FAILED` : 'All self-tests passed');
-process.exit(fails ? 1 : 0);
+
+// ---- v6: progress merge, API schemas, rate limiter ----
+(async () => {
+  const g = (o: Partial<import('../src/lib/game').Game>) => ({ xp: 0, streak: 0, last: '', tapOk: 0, quizOk: 0, variants: 0, ...o });
+  const m = mergeProgress({ done: ['a', 'b'], game: g({ xp: 50, last: '2026-01-01', streak: 2, tapOk: 3 }) }, { done: ['b', 'c'], game: g({ xp: 80, last: '2026-01-05', streak: 1, quizOk: 4 }) });
+  ok(m.done.length === 3 && ['a', 'b', 'c'].every((x) => m.done.includes(x)), 'merge keeps every finished question');
+  ok(m.game.xp === 80 && m.game.tapOk === 3 && m.game.quizOk === 4, 'merge keeps the best counters');
+  ok(m.game.last === '2026-01-05' && m.game.streak === 1, 'merge keeps the newest streak');
+
+  ok(lineInput.safeParse({ L: 70, theta: 0, phi: 30, ha: 20, da: 15, n1: 'A', n2: 'B' }).success, 'good line input passes schema');
+  ok(!lineInput.safeParse({ L: 70, theta: 95, phi: 30, ha: 20, da: 15 }).success, 'angle > 90 rejected');
+  ok(!lineInput.safeParse({ L: NaN, theta: 0, phi: 0, ha: 0, da: 0 }).success, 'NaN rejected');
+  ok(!lineInput.safeParse({ L: 70, theta: 0, phi: 0, ha: 0, da: 0, n1: 'AB' }).success, 'long name rejected');
+  ok(progressSchema.safeParse({ done: ['s1'], game: g({}) }).success, 'progress schema accepts good data');
+  ok(!progressSchema.safeParse({ done: new Array(501).fill('x'), game: g({}) }).success, 'progress schema caps size');
+  ok(!feedbackSchema.safeParse({ kind: 'bug', message: 'x' }).success, 'feedback needs a real message');
+  ok(profileSchema.safeParse({ name: ' Asha ', roll: '22ED01' }).success, 'profile ok');
+
+  let allowed = 0;
+  for (let i = 0; i < 8; i++) if (await allow('test-key', 5)) allowed++;
+  ok(allowed === 5, `rate limiter allowed ${allowed}, expected 5`);
+  ok(await allow('other-key', 5), 'rate limiter keeps keys separate');
+
+  // database client against a fake Supabase (no network)
+  const calls: { url: string; method: string; body?: string; headers: Record<string, string> }[] = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (u: string, init: RequestInit = {}) => {
+    calls.push({ url: String(u), method: init.method ?? 'GET', body: init.body as string | undefined, headers: (init.headers ?? {}) as Record<string, string> });
+    const body = String(u).includes('/functions/v1/') ? { ok: true, data: [{ id: 'x' }] } : [{ id: 'x' }];
+    return new Response(JSON.stringify(body), { status: 200 });
+  }) as typeof fetch;
+  delete process.env.SUPABASE_URL;
+  ok(!dbEnabled() && (await db('select', 'sheets', 'user_1')) === null, 'db off without env');
+  process.env.SUPABASE_URL = 'https://x.supabase.co';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'srv';
+  await db('select', 'sheets', 'user_1', { select: 'id,title', order: 'created_at.desc', limit: 5 });
+  ok(calls[0].url.includes('user_id=eq.user_1') && calls[0].url.includes('order=created_at.desc') && calls[0].method === 'GET', 'select is scoped to the user');
+  await db('delete', 'sheets', 'user_1', { match: { id: '3fa85f64-5717-4562-b3fc-2c963f66afa6' } });
+  ok(calls[1].method === 'DELETE' && calls[1].url.includes('user_id=eq.user_1') && calls[1].url.includes('id=eq.3fa85f64'), 'delete is scoped to user AND id');
+  await db('upsert', 'progress', 'user_1', { values: { done: [], user_id: 'attacker' } });
+  ok(JSON.parse(calls[2].body!).user_id === 'user_1' && calls[2].url.includes('on_conflict=user_id'), 'upsert forces the caller user id');
+  ok((await db('select', 'sheets', 'a&user_id=eq.b')) === null, 'weird user ids are refused');
+  ok((await db('select', 'sheets', 'user_1', { match: { id: 'x y' } })) === null, 'weird match values are refused');
+  process.env.EDCAT_FN_TOKEN = 'token-token-token-token-token';
+  await db('select', 'progress', 'user_1');
+  const last = calls[calls.length - 1];
+  ok(last.url.endsWith('/functions/v1/edcat-sheets') && last.headers['x-edcat-token'] === process.env.EDCAT_FN_TOKEN, 'edge function transport used when token set');
+  globalThis.fetch = realFetch;
+
+  if (fails) { console.error(`${fails} self-test(s) failed`); process.exit(1); }
+  console.log('All self-tests passed');
+})();

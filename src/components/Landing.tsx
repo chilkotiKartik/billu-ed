@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Cat } from './Cat';
 import HeroDemo from './HeroDemo';
-import { SHEETS } from '@/lib/catalog';
+import { SHEETS, ALL } from '@/lib/catalog';
 
 const FEATURES = [
   ['📸', 'Scan, type or pick', 'Photograph a question or type it. The app reads the numbers and asks you to confirm them. No guessing.'],
@@ -39,7 +39,7 @@ export default function Landing({ signedIn }: { signedIn: boolean }) {
           <h1>Learn to draw <span className="acc">every sheet</span>, one clear step at a time.</h1>
           <p className="lead">ED Cat shows each line being drawn, tells you its exact length and the pencil to use, and explains why. Points, lines, projections and more, from Sheet 1 to Sheet 4.</p>
           <div className="cta"><Link className="lbtn pri big" href={go.href}>{go.label}</Link>{!signedIn && <Link className="lbtn big" href="/sign-in">I have an account</Link>}</div>
-          <div className="trust"><span>✅ Works on your phone</span><span>✅ Install like an app</span><span>✅ 18 questions covered</span></div>
+          <div className="trust"><span>✅ Works on your phone</span><span>✅ Install like an app</span><span>✅ {ALL.length} questions covered</span></div>
         </div>
         <div className="fadein" style={{ animationDelay: '.15s' }}><HeroDemo /></div>
       </header>
@@ -69,7 +69,7 @@ export default function Landing({ signedIn }: { signedIn: boolean }) {
         <p>Free for students. Takes less than a minute to start.</p>
         <Link className="lbtn pri big" href={go.href}>{go.label}</Link>
       </section>
-      <footer className="foot">ED Cat · Made with 🐾 for Engineering Drawing students · Drawings follow first-angle projection and BIS conventions</footer>
+      <footer className="foot">ED Cat · Made with 🐾 for Engineering Drawing students · Drawings follow first-angle projection and BIS conventions · <Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link></footer>
     </div>
   );
 }
