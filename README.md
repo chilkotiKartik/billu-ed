@@ -1,86 +1,76 @@
-# ED Buddy
+# ED Cat (ED Buddy)
 
-Step-by-step Engineering Drawing helper. Installable phone web app (PWA). Version 1 covers **projection of lines** (parallel to HP, parallel to VP, inclined to both) in first angle on an A3 sheet.
+Step-by-step Engineering Drawing helper for students: an installable phone web app (PWA) with animated pencil-and-compass lessons, a cat tutor, practice, XP and badges. Covers Sheets 1 to 3 (types of lines, points, projection of lines) in first angle, plus a generic line solver. Sheets are laid out on A1/A3 and download as PDF.
 
-## How a question is processed (no AI, no paid API)
+**Stack:** Next.js 16 (App Router) · React 19 · Clerk (auth) · Supabase (database) · Upstash Redis (optional, shared rate limits) · Gemini (optional, photo fallback) · Vercel (hosting).
 
-1. **Photo** → text is read **in the browser** by Tesseract OCR (free). **Typed** questions skip this. **Ready questions** skip it too.
-2. **Parser** (`src/lib/parser.ts`) pulls out length, θ, φ, height above HP, distance in front of VP and the line name using plain rules.
-2b. **Gemini fallback (optional)**: only if the rules could not find every value, the server (`/api/read`) asks Gemini to read the question (text and/or photo) into numbers. Rule-found values always win. Gemini never solves or draws. Set `GEMINI_API_KEY` (free key from Google AI Studio) to turn it on; leave it empty to run with no AI at all.
-3. **Confirm screen**: the student sees the numbers and can fix any OCR mistake. This is the safety net.
-4. **Solver** (`src/lib/solver.ts`, runs on the server at `/api/solve`) does the exact maths and builds the steps and the final sheet. Same input always gives the same, correct answer.
-5. **Step player** draws each step (SVG), says which tool to use and why. **Sheet** = A3 preview, PDF download, Save.
+## How a question is processed
 
-## Run it (Antigravity, VS Code or any terminal)
+1. **Photo** is read in the browser by Tesseract OCR; typed and ready questions skip this.
+2. **Parser** (`src/lib/parser.ts`) extracts length, angles and end-A position with plain rules. If something is missing, the server (`/api/read`) may ask Gemini to read it; rule-found values always win. Gemini never solves or draws.
+3. **Confirm screen** lets the student fix any OCR mistake.
+4. **Solver** (`src/lib/solver.ts`, run by `/api/solve`) does the exact maths and builds the steps and the final sheet. Same input, same answer.
+5. **Lesson player, steps, A1/A3 sheet, PDF.**
+
+## Run locally
 
 ```bash
 npm install
-cp .env.example .env.local      # then fill in the keys
-npm run dev                     # http://localhost:3000
-npm test                        # solver + parser self-tests
+cp .env.example .env.local   # fill in the Clerk keys at least
+npm run dev                  # http://localhost:3000
 ```
 
-- **Clerk**: create an application at clerk.com, copy the publishable and secret keys into `.env.local`. Turn on Google / email sign-in there.
-- **Supabase (optional)**: create a project, run `supabase/schema.sql` in the SQL editor, put `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`. Without it, "Save" keeps sheets on the student's phone.
+| Command | What it does |
+|---|---|
+| `npm run typecheck` | TypeScript, whole project |
+| `npm test` | Solver, parser, progress merge, API schemas, rate limiter and database-client tests |
+| `npm run build` | Production build |
 
-## Deploy for your 100 students
+CI (`.github/workflows/ci.yml`) runs typecheck, tests, `npm audit` and a build on every push and pull request. Dependabot opens weekly update PRs.
 
-Push to GitHub → import on Vercel → add the same env vars → deploy. Free tiers of Vercel, Clerk and Supabase are enough for ~100 users.
+## Deploy on Vercel
+
+1. Push to GitHub, then **Add New Project** on Vercel and import the repo.
+2. Add the environment variables from `.env.example` (Project Settings, Environment Variables).
+3. In **Clerk**: switch the app to Production, add your Vercel domain, and use the production keys.
+4. Deploy. Check `https://<your-domain>/api/health`; it shows which optional features are switched on (no secrets).
+
+### Account storage (Supabase)
+
+Without it the app still works; progress and sheets stay on the student's phone. To turn it on:
+
+1. Create a Supabase project and run `supabase/migrations/0001_init.sql` in the SQL editor (or `supabase db push`).
+2. Pick one:
+   - **Direct:** set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel.
+   - **Edge function (safer):** `supabase secrets set EDCAT_FN_TOKEN=<long random>`, deploy `supabase/edcat-sheets.ts` with JWT verification off, and set `SUPABASE_URL` + the same `EDCAT_FN_TOKEN` in Vercel. The function refuses to run without a strong token.
+3. Every table has row-level security on with no policies, so browsers can never read it. Only the server reaches it, and every query is scoped to the signed-in Clerk user id.
+
+What gets stored: sheets (up to 100 per student), progress (finished questions, XP, streak, badge counters), name and roll number for the title block, and feedback messages. Progress **merges** between phone and account (union of finished questions, best counters), so a student never loses work by switching devices.
+
+### Shared rate limiting (Upstash, recommended)
+
+Serverless instances do not share memory, so set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (free tier is enough). Without them limits are per instance.
 
 ## Install on a phone
 
-Open the Vercel link in Chrome (Android) → menu → **Install app**. On iPhone use Safari → Share → **Add to Home Screen**. For a Play Store app later, wrap this same site with Capacitor or a Trusted Web Activity.
+Chrome (Android): menu, **Install app**. iPhone Safari: Share, **Add to Home Screen**. The app shows a friendly offline page when there is no internet; progress is kept on the phone and syncs later.
 
-## Limits to know
+## Optional: lecture videos
 
-- OCR works best on printed text or neat writing in good light. The Confirm screen exists for the rest.
-- The first photo scan downloads OCR language data (a few MB) and needs internet.
-- Only line projections for now. Add points, planes, solids as new files next to `solver.ts` using the same step format.
-- Have an ED lecturer check the steps against your textbook before students rely on it.
+Set `YOUTUBE_API_KEY`, or pin videos once with `YOUTUBE_API_KEY=xxx npx tsx scripts/fetch-videos.ts` and review `src/lib/pinned.json`.
 
-## Files
+## Project map
 
-- `src/lib/solver.ts` maths + steps · `parser.ts` question reader · `presets.ts` ready/random questions · `mistakes.ts` mistake list
-- `src/components/Workspace.tsx` all screens · `Prims.tsx` drawing renderer
-- `src/app/api/solve` and `src/app/api/sheets` backend · `src/middleware.ts` Clerk protection
-- `public/manifest.webmanifest` + `sw.js` PWA
+- `src/lib/solver.ts`, `points.ts`, `derived.ts`, `sheet1.ts`, `catalog.ts`: maths, steps and all questions
+- `src/lib/progress.ts`, `sync.ts`, `store.ts`: progress merge, account sync, saved sheets
+- `src/lib/schemas.ts`: zod validation for every API body
+- `src/lib/server/`: `http.ts` (auth, rate limit, validation), `ratelimit.ts`, `db.ts` (Supabase client)
+- `src/app/api/*`: `solve`, `read`, `sheets`, `progress`, `profile`, `feedback`, `videos`, `health`
+- `src/proxy.ts`: Clerk route protection
+- `supabase/`: migrations and the optional edge function
+- `scripts/`: preview and render helpers used during development
 
-## v2: Sheets 1 to 3 (all questions built in)
-- **Sheets tab** lists every question from Sheet 1 (types of lines), Sheet 2 (points A–G, Q7, lines A1–B3) and Sheet 3 (C1–C3, Q2–Q6) with step-by-step drawings, arrows, A3 sheet, PDF and common mistakes. Tick marks show what you finished.
-- Scanning or typing one of these questions opens the matching solved question (words + all numbers must agree). Any other line question still goes through the generic line solver.
-- Code: `src/lib/catalog.ts` (all questions), `points.ts`, `derived.ts`, `sheet1.ts`, `videos.ts`.
-- **Videos**: the button opens YouTube search links. To play a video you trust inside the app, put its 11-character id in `src/lib/videos.ts` (`id: '...'`).
-- Assumptions to check with your lecturer: Sheet 3 Q1 (C1–C3) lines are 75 mm like X(a) Q1; Sheet 1 uses an original figure with the standard BIS line types.
-- Preview renders: `npx tsx scripts/render.tsx <folder>` writes SVGs. Tests: `npx tsx scripts/selftest.ts`.
+## Notes
 
-## v3: cat theme + deploy on Netlify
-- Pixel the cat explains every step in a speech bubble (SVG + CSS animation: blink, tail wag, ear twitch, paw wave, hop on the final sheet).
-- Each step shows: **What I added** (every line, arc, point with its length), **Length / calculation**, and step 1 shows **How we crack this question**.
-- Deploy: push this folder to GitHub, then Netlify > Add new site > Import from Git. `netlify.toml` is included (Next.js plugin).
-  Set environment variables: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, CLERK_SECRET_KEY, NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in, NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up, and optionally SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GEMINI_API_KEY.
-  In Clerk, add your Netlify domain to the allowed domains.
-
-## v4: live animated lessons, sidebar, full A3 sheets
-- **Animated lesson** (Player.tsx): every question is replayed live with a ruler, pencil and compass, a cat narrator, a play/pause/scrub timeline, 0.5× to 2× speed, optional cat voice, a step checklist and the working for each step. This is the built-in video, so no YouTube link is needed.
-- **Sidebar**: sheets, parts and questions with ticks, progress ring and a Scan → Check → Steps → Sheet flow. On phones it opens from the menu button.
-- **Full A3 sheets** (FullSheet.tsx, fullsheet.ts): each part of a sheet is laid out like a real submission page with margins, labelled questions at one scale and a title block (name, roll no.). PDF download per page.
-- **How it works** screen explains how questions were added; each question's "setup" line lives in `catalog.ts` (SETUPS and the `line()` helper).
-- Preview tools: `scripts/harness.tsx` (bundle with esbuild to watch the player), `scripts/pages.tsx` (render A3 pages).
-
-## v5: game layer and practice
-- **XP, levels, streak, 9 badges** (game.ts): +30 finish a question, +15 new numbers, +10 quiz, +5 placed point. The cat grows glasses, a graduation cap, a scarf and a crown. Progress is stored on the device.
-- **Your turn** (Challenge.tsx): tap where the next point goes; the cat checks the exact position (5 mm tolerance).
-- **Cat quiz** (quiz.ts): 1 to 3 questions made automatically from each solution's results and steps.
-- **Try new numbers** (catalog.ts `variantOf`): same kind of line question, fresh numbers, drawn by the same solver.
-- **Sounds** (sfx.ts): synthesised in the browser, mute button in the header.
-
-## Live deployment
-- Site: https://ed-cat.netlify.app (Netlify site "ed-cat", deployed from this folder)
-- Clerk app "ED Cat" (development instance), Supabase project "ed-cat" (ref pftqyihswtudnfhalmxf, Mumbai)
-- All settings are in `.env.local` (keep it private; it contains the Clerk secret key and the function token).
-- Redeploy: `npm i && npx netlify deploy --prod` (or push to Git and connect the repo in Netlify).
-- Before real students use it: in Clerk, switch the app to production and add your domain; for Netlify, add the same variables.
-
-## YouTube lectures
-Set `YOUTUBE_API_KEY` (YouTube Data API v3). Each question then shows real lecture videos that play inside the app (`/api/videos`, cached 7 days, about 100 quota units per new search of the 10,000 free per day).
-To avoid using quota at all, run once: `YOUTUBE_API_KEY=xxx npx tsx scripts/fetch-videos.ts`, check `src/lib/pinned.json`, delete videos you dislike, and redeploy. Pinned videos are shown first.
+- Have an ED lecturer check the steps against your textbook before students rely on them. The "Report a mistake" button in each step writes to the `feedback` table.
+- Assumptions to confirm: Sheet 3 Q1 (C1 to C3) lines are 75 mm; Sheet 1 uses an original figure with BIS line types.

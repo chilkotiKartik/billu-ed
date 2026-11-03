@@ -354,3 +354,20 @@ body{background-image:radial-gradient(circle at 20% 10%,#FFE9C7 0,transparent 40
 .fsctrl{display:flex;align-items:center;gap:8px;padding-top:6px}
 .fsctrl .cb{min-width:44px;height:40px}
 .fsctrl .scrub{flex:1}
+
+/* ---- v6: sync, sheet management, feedback, accessibility ---- */
+.field select,.field textarea{border:0;outline:0;background:transparent;font-size:16px;width:100%;font-family:inherit;resize:vertical;min-height:28px}
+.sync{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;font-size:15px;border-radius:999px;background:#fff;border:1px solid var(--line)}
+.sync.offline{background:#FFF4E5}
+.item.row{padding:0;gap:0;cursor:default;overflow:hidden}
+.item.row .open{flex:1;display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:48px;padding:10px 12px 10px 16px;border:0;background:transparent;text-align:left;font-size:15px;font-weight:500;cursor:pointer}
+.mini{border:0;border-left:1px solid var(--line);background:transparent;min-width:48px;min-height:48px;font-size:17px;cursor:pointer}
+.mini:hover{background:#F5F2EA}
+.reportbtn{border:1px dashed var(--line);background:transparent;border-radius:12px;padding:10px 12px;font-size:13px;color:var(--mut);cursor:pointer;text-align:left}
+.reportbtn:hover{border-color:var(--ink);color:var(--ink)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[role=tab]:focus-visible{outline:3px solid #0B7A75;outline-offset:2px}
+.legal{max-width:720px;margin:0 auto;padding:32px 20px 64px;line-height:1.6}
+.legal h1{margin-bottom:6px}.legal h2{font-size:19px;margin-top:26px}.legal a{color:var(--teal)}
+.errpage{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center}
+.errpage .btn,.errpage a.btn{text-decoration:none}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}

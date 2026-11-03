@@ -3,7 +3,7 @@ import Landing from '@/components/Landing';
 
 export const dynamic = 'force-dynamic';
 
-export default function Page() {
-  const { userId } = auth();
+export default async function Page() {
+  const { userId } = await auth();
   return <Landing signedIn={!!userId} />;
 }

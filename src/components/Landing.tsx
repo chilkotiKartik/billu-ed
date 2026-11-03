@@ -69,7 +69,7 @@ export default function Landing({ signedIn }: { signedIn: boolean }) {
         <p>Free for students. Takes less than a minute to start.</p>
         <Link className="lbtn pri big" href={go.href}>{go.label}</Link>
       </section>
-      <footer className="foot">ED Cat · Made with 🐾 for Engineering Drawing students · Drawings follow first-angle projection and BIS conventions</footer>
+      <footer className="foot">ED Cat · Made with 🐾 for Engineering Drawing students · Drawings follow first-angle projection and BIS conventions · <Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link></footer>
     </div>
   );
 }

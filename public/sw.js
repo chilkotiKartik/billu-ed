@@ -1,17 +1,27 @@
-// Minimal service worker: makes the app installable and caches static files for faster, flaky-network loads.
-const CACHE = 'edbuddy-v9';
-self.addEventListener('install', () => self.skipWaiting());
+// Service worker: caches static files for fast loads and shows a friendly page when offline.
+// Bump VERSION when this file changes in a way that needs old caches cleared.
+const VERSION = 'edcat-v10';
+const OFFLINE = '/offline.html';
+
+self.addEventListener('install', (e) => {
+  e.waitUntil(caches.open(VERSION).then((c) => c.add(OFFLINE)).then(() => self.skipWaiting()));
+});
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', (e) => {
-  const u = new URL(e.request.url);
-  if (e.request.method !== 'GET' || u.origin !== location.origin) return;
+  const req = e.request;
+  const u = new URL(req.url);
+  if (req.method !== 'GET' || u.origin !== location.origin || u.pathname.startsWith('/api/')) return;
+  if (req.mode === 'navigate') {
+    e.respondWith(fetch(req).catch(() => caches.match(OFFLINE)));
+    return;
+  }
   if (u.pathname.startsWith('/_next/static') || /\.(png|svg|webmanifest|woff2?)$/.test(u.pathname)) {
     e.respondWith(
-      caches.open(CACHE).then(async (c) => {
-        const hit = await c.match(e.request);
-        const net = fetch(e.request).then((r) => { if (r.ok) c.put(e.request, r.clone()); return r; }).catch(() => hit);
+      caches.open(VERSION).then(async (c) => {
+        const hit = await c.match(req);
+        const net = fetch(req).then((r) => { if (r.ok) c.put(req, r.clone()); return r; }).catch(() => hit);
         return hit || net;
       })
     );
